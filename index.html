@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TCR Map</title>
+    
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+        integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+        crossorigin=""/>
+    
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div id="map"></div>
+    
+    <div id="legend">
+        <div class="legend-header">
+            <h4 class="legend-title">Map Layers</h4>
+            <span id="toggle-legend"></span>
+        </div>
+        <div id="legend-content-wrapper">
+            
+            <!-- Individual layers without categories -->
+            <div style="display: flex; align-items: center; margin-bottom: 8px;">
+                <input type="checkbox" id="growth-zones" checked style="margin-right: 8px;">
+                <div style="width: 16px; height: 16px; background-color: #ff6b6b; border: 1px solid #ff4757; margin-right: 8px;"></div>
+                <span>Growth Zones</span>
+            </div>
+            <div style="display: flex; align-items: center; margin-bottom: 8px;">
+                <input type="checkbox" id="housing" checked style="margin-right: 8px;">
+                <div style="width: 16px; height: 16px; background-color: #4ecdc4; border: 1px solid #ccc; margin-right: 8px;"></div>
+                <span>Housing</span>
+            </div>
+            <div style="display: flex; align-items: center; margin-bottom: 8px;">
+                <input type="checkbox" id="ptal" checked style="margin-right: 8px;">
+                <div style="width: 16px; height: 16px; background-color: #45b7d1; border: 1px solid #ccc; margin-right: 8px;"></div>
+                <span>PTAL (Transport Accessibility)</span>
+            </div>
+            <div style="display: flex; align-items: center; margin-bottom: 8px;">
+                <input type="checkbox" id="tcr-schemes" checked style="margin-right: 8px;">
+                <div style="width: 16px; height: 16px; background-color: #54a0ff; border: 1px solid #ccc; margin-right: 8px;"></div>
+                <span>TCR Schemes</span>
+            </div>
+            
+            <!-- Transport Infrastructure as the only grouped category -->
+            <div class="legend-category">
+                <div class="legend-category-header">
+                    <span>Transport Infrastructure</span>
+                </div>
+                <div class="legend-category-content">
+                    <div style="display: flex; align-items: center; margin-bottom: 8px;">
+                        <input type="checkbox" id="bus-lines" checked style="margin-right: 8px;">
+                        <div style="width: 20px; height: 3px; border-top: 3px solid #2196F3; margin-right: 8px;"></div>
+                        <span>Bus Lines</span>
+                    </div>
+                    <div style="display: flex; align-items: center; margin-bottom: 8px;">
+                        <input type="checkbox" id="bus-stops" checked style="margin-right: 8px;">
+                        <div style="width: 12px; height: 12px; background-color: #FF9800; border-radius: 50%; margin-right: 8px; border: 2px solid #fff; box-shadow: 0 0 0 1px #ccc;"></div>
+                        <span>Bus Stops</span>
+                    </div>
+                    <div style="display: flex; align-items: center; margin-bottom: 8px;">
+                        <input type="checkbox" id="rail-stations" checked style="margin-right: 8px;">
+                        <div style="width: 12px; height: 12px; background-color: #8E24AA; border-radius: 50%; margin-right: 8px; border: 2px solid #fff; box-shadow: 0 0 0 1px #ccc;"></div>
+                        <span>Rail Stations</span>
+                    </div>
+                </div>
+            </div>
+            
+        </div>
+    </div>
+    
+    <!-- Leaflet JavaScript -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+        integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+        crossorigin=""></script>
+    
+    <!-- Proj4 for coordinate transformations -->
+    <script src="https://unpkg.com/proj4@2.9.0/dist/proj4.js"></script>
+    <script src="https://unpkg.com/proj4leaflet@1.0.2/dist/proj4leaflet.min.js"></script>
+    
+    <!-- Custom JavaScript -->
+    <script src="map.js"></script>
+</body>
+</html>
