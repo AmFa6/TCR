@@ -7,104 +7,20 @@
                     <span>Transport Infrastructure</span>
                 </div>
                 <div class="legend-category-content">
-                    <div class="layer-control-group">
-                        <div class="layer-header">
-                            <input type="checkbox" id="bus-lines" checked> 
-                            <span class="layer-name">Bus Lines</span>
-                            <button class="style-button" onclick="openStylePanel('bus-lines')">⚙️</button>
-                        </div>
-                        <div class="style-panel" id="style-panel-bus-lines" style="display: none;">
-                            <div class="style-option">
-                                <label>Style by:</label>
-                                <select class="style-attribute" data-layer="bus-lines">
-                                    <option value="single">Single Symbol</option>
-                                    <option value="operator">By Operator</option>
-                                    <option value="route">By Route</option>
-                                </select>
-                            </div>
-                            <div class="style-controls">
-                                <div class="color-control">
-                                    <label>Line Color:</label>
-                                    <input type="color" class="color-picker" data-layer="bus-lines" data-property="color" value="#2196F3">
-                                </div>
-                                <div class="width-control">
-                                    <label>Line Width:</label>
-                                    <input type="range" class="line-width" data-layer="bus-lines" min="1" max="10" value="3">
-                                    <span class="width-value">3px</span>
-                                </div>
-                                <div class="opacity-control">
-                                    <label>Opacity:</label>
-                                    <input type="range" class="opacity-slider" data-layer="bus-lines" min="0" max="100" value="80">
-                                    <span class="opacity-value">80%</span>
-                                </div>
-                            </div>
-                        </div>
+                    <div style="display: flex; align-items: center; margin-bottom: 8px;">
+                        <input type="checkbox" id="bus-lines" checked style="margin-right: 8px;">
+                        <div style="width: 20px; height: 3px; border-top: 3px solid #2196F3; margin-right: 8px;"></div>
+                        <span>Bus Lines</span>
                     </div>
-                    <div class="layer-control-group">
-                        <div class="layer-header">
-                            <input type="checkbox" id="bus-stops" checked> 
-                            <span class="layer-name">Bus Stops</span>
-                            <button class="style-button" onclick="openStylePanel('bus-stops')">⚙️</button>
-                        </div>
-                        <div class="style-panel" id="style-panel-bus-stops" style="display: none;">
-                            <div class="style-option">
-                                <label>Style by:</label>
-                                <select class="style-attribute" data-layer="bus-stops">
-                                    <option value="single">Single Symbol</option>
-                                    <option value="bearing">By Bearing</option>
-                                    <option value="stop_id">By Stop ID</option>
-                                </select>
-                            </div>
-                            <div class="style-controls">
-                                <div class="color-control">
-                                    <label>Marker Color:</label>
-                                    <input type="color" class="color-picker" data-layer="bus-stops" data-property="fillColor" value="#FF9800">
-                                </div>
-                                <div class="size-control">
-                                    <label>Marker Size:</label>
-                                    <input type="range" class="marker-size" data-layer="bus-stops" min="3" max="15" value="6">
-                                    <span class="size-value">6px</span>
-                                </div>
-                                <div class="opacity-control">
-                                    <label>Opacity:</label>
-                                    <input type="range" class="opacity-slider" data-layer="bus-stops" min="0" max="100" value="90">
-                                    <span class="opacity-value">90%</span>
-                                </div>
-                            </div>
-                        </div>
+                    <div style="display: flex; align-items: center; margin-bottom: 8px;">
+                        <input type="checkbox" id="bus-stops" checked style="margin-right: 8px;">
+                        <div style="width: 12px; height: 12px; background-color: #FF9800; border-radius: 50%; margin-right: 8px; border: 2px solid #fff; box-shadow: 0 0 0 1px #ccc;"></div>
+                        <span>Bus Stops</span>
                     </div>
-                    <div class="layer-control-group">
-                        <div class="layer-header">
-                            <input type="checkbox" id="rail-stations" checked> 
-                            <span class="layer-name">Rail Stations</span>
-                            <button class="style-button" onclick="openStylePanel('rail-stations')">⚙️</button>
-                        </div>
-                        <div class="style-panel" id="style-panel-rail-stations" style="display: none;">
-                            <div class="style-option">
-                                <label>Style by:</label>
-                                <select class="style-attribute" data-layer="rail-stations">
-                                    <option value="single">Single Symbol</option>
-                                    <option value="name">By Station Name</option>
-                                    <option value="type">By Station Type</option>
-                                </select>
-                            </div>
-                            <div class="style-controls">
-                                <div class="color-control">
-                                    <label>Marker Color:</label>
-                                    <input type="color" class="color-picker" data-layer="rail-stations" data-property="fillColor" value="#8E24AA">
-                                </div>
-                                <div class="size-control">
-                                    <label>Marker Size:</label>
-                                    <input type="range" class="marker-size" data-layer="rail-stations" min="5" max="20" value="10">
-                                    <span class="size-value">10px</span>
-                                </div>
-                                <div class="opacity-control">
-                                    <label>Opacity:</label>
-                                    <input type="range" class="opacity-slider" data-layer="rail-stations" min="0" max="100" value="90">
-                                    <span class="opacity-value">90%</span>
-                                </div>
-                            </div>
-                        </div>
+                    <div style="display: flex; align-items: center; margin-bottom: 8px;">
+                        <input type="checkbox" id="rail-stations" checked style="margin-right: 8px;">
+                        <div style="width: 12px; height: 12px; background-color: #8E24AA; border-radius: 50%; margin-right: 8px; border: 2px solid #fff; box-shadow: 0 0 0 1px #ccc;"></div>
+                        <span>Rail Stations</span>
                     </div>
                 </div>
             </div>
@@ -133,99 +49,20 @@
                     <span>Growth & Development</span>
                 </div>
                 <div class="legend-category-content">
-                    <div class="layer-control-group">
-                        <div class="layer-header">
-                            <input type="checkbox" id="growth-zones" checked> 
-                            <span class="layer-name">Growth Zones</span>
-                            <button class="style-button" onclick="openStylePanel('growth-zones')">⚙️</button>
-                        </div>
-                        <div class="style-panel" id="style-panel-growth-zones" style="display: none;">
-                            <div class="style-option">
-                                <label>Style by:</label>
-                                <select class="style-attribute" data-layer="growth-zones">
-                                    <option value="single">Single Symbol</option>
-                                    <option value="Name">By Name</option>
-                                    <option value="GrowthType">By Growth Type</option>
-                                </select>
-                            </div>
-                            <div class="style-controls">
-                                <div class="color-control">
-                                    <label>Fill Color:</label>
-                                    <input type="color" class="color-picker" data-layer="growth-zones" data-property="fillColor" value="#ff6b6b">
-                                </div>
-                                <div class="opacity-control">
-                                    <label>Opacity:</label>
-                                    <input type="range" class="opacity-slider" data-layer="growth-zones" min="0" max="100" value="60">
-                                    <span class="opacity-value">60%</span>
-                                </div>
-                                <div class="stroke-control">
-                                    <label>Stroke:</label>
-                                    <input type="color" class="stroke-color" data-layer="growth-zones" value="#ff4757">
-                                    <input type="range" class="stroke-width" data-layer="growth-zones" min="0" max="5" value="2">
-                                </div>
-                            </div>
-                        </div>
+                    <div style="display: flex; align-items: center; margin-bottom: 8px;">
+                        <input type="checkbox" id="growth-zones" checked style="margin-right: 8px;">
+                        <div style="width: 16px; height: 16px; background-color: #ff6b6b; border: 1px solid #ff4757; margin-right: 8px;"></div>
+                        <span>Growth Zones</span>
                     </div>
-                    <div class="layer-control-group">
-                        <div class="layer-header">
-                            <input type="checkbox" id="housing" checked> 
-                            <span class="layer-name">Housing</span>
-                            <button class="style-button" onclick="openStylePanel('housing')">⚙️</button>
-                        </div>
-                        <div class="style-panel" id="style-panel-housing" style="display: none;">
-                            <div class="style-option">
-                                <label>Style by:</label>
-                                <select class="style-attribute" data-layer="housing">
-                                    <option value="single">Single Symbol</option>
-                                    <option value="units">By Housing Units</option>
-                                    <option value="type">By Type</option>
-                                </select>
-                            </div>
-                            <div class="style-controls">
-                                <div class="color-control">
-                                    <label>Fill Color:</label>
-                                    <input type="color" class="color-picker" data-layer="housing" data-property="fillColor" value="#4ecdc4">
-                                </div>
-                                <div class="opacity-control">
-                                    <label>Opacity:</label>
-                                    <input type="range" class="opacity-slider" data-layer="housing" min="0" max="100" value="60">
-                                    <span class="opacity-value">60%</span>
-                                </div>
-                            </div>
-                        </div>
+                    <div style="display: flex; align-items: center; margin-bottom: 8px;">
+                        <input type="checkbox" id="housing" checked style="margin-right: 8px;">
+                        <div style="width: 16px; height: 16px; background-color: #4ecdc4; border: 1px solid #ccc; margin-right: 8px;"></div>
+                        <span>Housing</span>
                     </div>
-                    <div class="layer-control-group">
-                        <div class="layer-header">
-                            <input type="checkbox" id="ptal" checked> 
-                            <span class="layer-name">PTAL (Transport Accessibility)</span>
-                            <button class="style-button" onclick="openStylePanel('ptal')">⚙️</button>
-                        </div>
-                        <div class="style-panel" id="style-panel-ptal" style="display: none;">
-                            <div class="style-option">
-                                <label>Style by:</label>
-                                <select class="style-attribute" data-layer="ptal">
-                                    <option value="single">Single Symbol</option>
-                                    <option value="PTAL">By PTAL Level</option>
-                                    <option value="graduated">Graduated Colors</option>
-                                </select>
-                            </div>
-                            <div class="style-controls">
-                                <div class="color-ramp-control">
-                                    <label>Color Ramp:</label>
-                                    <select class="color-ramp" data-layer="ptal">
-                                        <option value="red-green">Red to Green</option>
-                                        <option value="blue-red">Blue to Red</option>
-                                        <option value="viridis">Viridis</option>
-                                        <option value="spectral">Spectral</option>
-                                    </select>
-                                </div>
-                                <div class="opacity-control">
-                                    <label>Opacity:</label>
-                                    <input type="range" class="opacity-slider" data-layer="ptal" min="0" max="100" value="70">
-                                    <span class="opacity-value">70%</span>
-                                </div>
-                            </div>
-                        </div>
+                    <div style="display: flex; align-items: center; margin-bottom: 8px;">
+                        <input type="checkbox" id="ptal" checked style="margin-right: 8px;">
+                        <div style="width: 16px; height: 16px; background-color: #45b7d1; border: 1px solid #ccc; margin-right: 8px;"></div>
+                        <span>PTAL (Transport Accessibility)</span>
                     </div>
                 </div>
             </div>
@@ -235,45 +72,10 @@
                     <span>TCR Schemes</span>
                 </div>
                 <div class="legend-category-content">
-                    <div>
-                        <input type="checkbox" id="tcr-schemes" checked> 
-                        <span style="font-size: 1em;">TCR Schemes</span>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="legend-category">
-                <div class="legend-category-header">
-                    <span>Symbol Legend</span>
-                </div>
-                <div class="legend-category-content">
-                    <div style="display: flex; align-items: center; margin-bottom: 5px;">
-                        <div style="width: 20px; height: 20px; background-color: #ff6b6b; border-radius: 3px; margin-right: 10px; border: 1px solid #ccc;"></div>
-                        <span style="font-size: 0.9em;">Growth Zones</span>
-                    </div>
-                    <div style="display: flex; align-items: center; margin-bottom: 5px;">
-                        <div style="width: 20px; height: 20px; background-color: #4ecdc4; border-radius: 3px; margin-right: 10px; border: 1px solid #ccc;"></div>
-                        <span style="font-size: 0.9em;">Housing Areas</span>
-                    </div>
-                    <div style="display: flex; align-items: center; margin-bottom: 5px;">
-                        <div style="width: 20px; height: 20px; background-color: #45b7d1; border-radius: 3px; margin-right: 10px; border: 1px solid #ccc;"></div>
-                        <span style="font-size: 0.9em;">High PTAL Areas</span>
-                    </div>
-                    <div style="display: flex; align-items: center; margin-bottom: 5px;">
-                        <div style="width: 20px; height: 3px; border-top: 3px solid #96ceb4; margin-right: 10px;"></div>
-                        <span style="font-size: 0.9em;">Bus Lines</span>
-                    </div>
-                    <div style="display: flex; align-items: center; margin-bottom: 5px;">
-                        <div style="width: 12px; height: 12px; background-color: #feca57; border-radius: 50%; margin-right: 10px; border: 2px solid #fff; box-shadow: 0 0 0 1px #ccc;"></div>
-                        <span style="font-size: 0.9em;">Bus Stops</span>
-                    </div>
-                    <div style="display: flex; align-items: center; margin-bottom: 5px;">
-                        <div style="width: 12px; height: 12px; background-color: #ff9ff3; border-radius: 50%; margin-right: 10px; border: 2px solid #fff; box-shadow: 0 0 0 1px #ccc;"></div>
-                        <span style="font-size: 0.9em;">Rail Stops</span>
-                    </div>
-                    <div style="display: flex; align-items: center; margin-bottom: 5px;">
-                        <div style="width: 20px; height: 20px; background-color: #54a0ff; border-radius: 3px; margin-right: 10px; border: 1px solid #ccc;"></div>
-                        <span style="font-size: 0.9em;">TCR Schemes</span>
+                    <div style="display: flex; align-items: center; margin-bottom: 8px;">
+                        <input type="checkbox" id="tcr-schemes" checked style="margin-right: 8px;">
+                        <div style="width: 16px; height: 16px; background-color: #54a0ff; border: 1px solid #ccc; margin-right: 8px;"></div>
+                        <span>TCR Schemes</span>
                     </div>
                 </div>
             </div>
