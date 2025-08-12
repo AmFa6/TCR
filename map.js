@@ -1,4 +1,4 @@
-// Initialize the map
+// Initialize the map with TAF-style design
 let map;
 let layerGroups = {};
 let baseMaps = {};
@@ -6,7 +6,7 @@ let baseMaps = {};
 // Initialize map when page loads
 document.addEventListener('DOMContentLoaded', function() {
     initializeMap();
-    setupLayerControls();
+    setupLegendControls();
     loadSampleData();
 });
 
@@ -48,12 +48,41 @@ function initializeMap() {
     L.control.scale({position: 'bottomleft'}).addTo(map);
 }
 
-function setupLayerControls() {
+function setupLegendControls() {
+    // Setup legend category collapsible functionality (TAF style)
+    document.querySelectorAll('.legend-category-header').forEach(header => {
+        header.addEventListener('click', function() {
+            const category = this.closest('.legend-category');
+            category.classList.toggle('legend-category-collapsed');
+        });
+    });
+    
+    // Setup legend toggle functionality
+    const legendHeader = document.querySelector('.legend-header');
+    let isLegendExpanded = true;
+    
+    if (legendHeader) {
+        legendHeader.addEventListener('click', function() {
+            isLegendExpanded = !isLegendExpanded;
+            
+            const legend = document.getElementById('legend');
+            legend.classList.toggle('collapsed', !isLegendExpanded);
+            
+            const legendContent = document.getElementById('legend-content-wrapper');
+            if (legendContent) {
+                legendContent.style.display = isLegendExpanded ? 'block' : 'none';
+            }
+            
+            const toggleIcon = document.getElementById('toggle-legend');
+            toggleIcon.classList.toggle('collapsed', !isLegendExpanded);
+        });
+    }
+
     // Layer checkboxes
-    const layerCheckboxes = document.querySelectorAll('.layer-checkbox input[type="checkbox"]');
+    const layerCheckboxes = document.querySelectorAll('input[type="checkbox"]:not([name])');
     layerCheckboxes.forEach(checkbox => {
         checkbox.addEventListener('change', function() {
-            const layerId = this.id.replace('-', '').replace('-', '');
+            const layerId = this.id.replace(/-/g, '');
             const camelCaseId = toCamelCase(this.id);
             
             if (layerGroups[camelCaseId]) {
@@ -135,9 +164,12 @@ function createSampleGrowthZones() {
         
         const popupContent = `
             <h4>${zone.name}</h4>
-            <p><strong>Area:</strong> ${zone.properties.area}</p>
-            <p><strong>Status:</strong> ${zone.properties.status}</p>
-            <p><strong>Planned Housing:</strong> ${zone.properties.housing_units} units</p>
+            <table class="popup-table">
+                <tr><th>Property</th><th>Value</th></tr>
+                <tr><td>Area</td><td>${zone.properties.area}</td></tr>
+                <tr><td>Status</td><td>${zone.properties.status}</td></tr>
+                <tr><td>Planned Housing</td><td>${zone.properties.housing_units} units</td></tr>
+            </table>
         `;
         
         polygon.bindPopup(popupContent);
@@ -164,8 +196,11 @@ function createSampleHousing() {
         
         const popupContent = `
             <h4>${area.name}</h4>
-            <p><strong>Housing Units:</strong> ${area.units}</p>
-            <p><strong>Type:</strong> ${area.type}</p>
+            <table class="popup-table">
+                <tr><th>Property</th><th>Value</th></tr>
+                <tr><td>Housing Units</td><td>${area.units}</td></tr>
+                <tr><td>Type</td><td>${area.type}</td></tr>
+            </table>
         `;
         
         circle.bindPopup(popupContent);
@@ -196,8 +231,11 @@ function createSamplePTAL() {
         
         const popupContent = `
             <h4>PTAL Level ${area.level}</h4>
-            <p><strong>Area:</strong> ${area.area}</p>
-            <p><strong>Accessibility:</strong> ${area.level >= 5 ? 'Excellent' : area.level >= 3 ? 'Good' : 'Moderate'}</p>
+            <table class="popup-table">
+                <tr><th>Property</th><th>Value</th></tr>
+                <tr><td>Area</td><td>${area.area}</td></tr>
+                <tr><td>Accessibility</td><td>${area.level >= 5 ? 'Excellent' : area.level >= 3 ? 'Good' : 'Moderate'}</td></tr>
+            </table>
         `;
         
         circle.bindPopup(popupContent);
@@ -229,7 +267,10 @@ function createSampleTransportInfrastructure() {
         
         polyline.bindPopup(`
             <h4>${line.name}</h4>
-            <p><strong>Operator:</strong> ${line.operator}</p>
+            <table class="popup-table">
+                <tr><th>Property</th><th>Value</th></tr>
+                <tr><td>Operator</td><td>${line.operator}</td></tr>
+            </table>
         `);
         
         layerGroups.busLines.addLayer(polyline);
@@ -254,7 +295,10 @@ function createSampleTransportInfrastructure() {
         
         marker.bindPopup(`
             <h4>${stop.name}</h4>
-            <p><strong>Routes:</strong> ${stop.routes.join(', ')}</p>
+            <table class="popup-table">
+                <tr><th>Property</th><th>Value</th></tr>
+                <tr><td>Routes</td><td>${stop.routes.join(', ')}</td></tr>
+            </table>
         `);
         
         layerGroups.busStops.addLayer(marker);
@@ -279,7 +323,10 @@ function createSampleTransportInfrastructure() {
         
         marker.bindPopup(`
             <h4>${stop.name}</h4>
-            <p><strong>Type:</strong> ${stop.type}</p>
+            <table class="popup-table">
+                <tr><th>Property</th><th>Value</th></tr>
+                <tr><td>Type</td><td>${stop.type}</td></tr>
+            </table>
         `);
         
         layerGroups.railStops.addLayer(marker);
@@ -305,8 +352,11 @@ function createSampleCRSTS2() {
         
         marker.bindPopup(`
             <h4>${point.name}</h4>
-            <p><strong>Scheme:</strong> ${point.scheme}</p>
-            <p><strong>Budget:</strong> ${point.budget}</p>
+            <table class="popup-table">
+                <tr><th>Property</th><th>Value</th></tr>
+                <tr><td>Scheme</td><td>${point.scheme}</td></tr>
+                <tr><td>Budget</td><td>${point.budget}</td></tr>
+            </table>
         `);
         
         layerGroups.crsts2Points.addLayer(marker);
@@ -338,8 +388,11 @@ function createSampleCRSTS2() {
         
         polyline.bindPopup(`
             <h4>${line.name}</h4>
-            <p><strong>Scheme:</strong> ${line.scheme}</p>
-            <p><strong>Length:</strong> ${line.length}</p>
+            <table class="popup-table">
+                <tr><th>Property</th><th>Value</th></tr>
+                <tr><td>Scheme</td><td>${line.scheme}</td></tr>
+                <tr><td>Length</td><td>${line.length}</td></tr>
+            </table>
         `);
         
         layerGroups.crsts2Lines.addLayer(polyline);
@@ -372,8 +425,11 @@ function createSampleCRSTS2() {
         
         poly.bindPopup(`
             <h4>${polygon.name}</h4>
-            <p><strong>Scheme:</strong> ${polygon.scheme}</p>
-            <p><strong>Area:</strong> ${polygon.area}</p>
+            <table class="popup-table">
+                <tr><th>Property</th><th>Value</th></tr>
+                <tr><td>Scheme</td><td>${polygon.scheme}</td></tr>
+                <tr><td>Area</td><td>${polygon.area}</td></tr>
+            </table>
         `);
         
         layerGroups.crsts2Polygons.addLayer(poly);

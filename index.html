@@ -14,114 +14,131 @@
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-    <div class="container">
-        <header>
-            <h1>TCR Transport and Housing Analysis Map</h1>
-            <p>Interactive map showing growth zones, transport infrastructure, and housing data</p>
-        </header>
-        
-        <div class="map-container">
-            <div id="map"></div>
-            
-            <div class="layer-control-panel">
-                <h3>Map Layers</h3>
-                
-                <div class="layer-group">
-                    <h4>Growth & Development</h4>
-                    <label class="layer-checkbox">
-                        <input type="checkbox" id="growth-zones" checked>
-                        <span>Growth Zones</span>
-                    </label>
-                    <label class="layer-checkbox">
-                        <input type="checkbox" id="housing" checked>
-                        <span>Housing</span>
-                    </label>
-                    <label class="layer-checkbox">
-                        <input type="checkbox" id="ptal" checked>
-                        <span>PTAL (Transport Accessibility)</span>
-                    </label>
-                </div>
-                
-                <div class="layer-group">
-                    <h4>Public Transport Infrastructure</h4>
-                    <label class="layer-checkbox">
-                        <input type="checkbox" id="bus-lines" checked>
-                        <span>Bus Lines</span>
-                    </label>
-                    <label class="layer-checkbox">
-                        <input type="checkbox" id="bus-stops" checked>
-                        <span>Bus Stops</span>
-                    </label>
-                    <label class="layer-checkbox">
-                        <input type="checkbox" id="rail-stops" checked>
-                        <span>Rail Stops</span>
-                    </label>
-                </div>
-                
-                <div class="layer-group">
-                    <h4>CRSTS2 Schemes</h4>
-                    <label class="layer-checkbox">
-                        <input type="checkbox" id="crsts2-points" checked>
-                        <span>CRSTS2 Points</span>
-                    </label>
-                    <label class="layer-checkbox">
-                        <input type="checkbox" id="crsts2-lines" checked>
-                        <span>CRSTS2 Lines</span>
-                    </label>
-                    <label class="layer-checkbox">
-                        <input type="checkbox" id="crsts2-polygons" checked>
-                        <span>CRSTS2 Polygons</span>
-                    </label>
-                </div>
-                
-                <div class="layer-group">
-                    <h4>Base Maps</h4>
-                    <label class="radio-group">
-                        <input type="radio" name="basemap" value="osm" checked>
-                        <span>OpenStreetMap</span>
-                    </label>
-                    <label class="radio-group">
-                        <input type="radio" name="basemap" value="satellite">
-                        <span>Satellite</span>
-                    </label>
-                    <label class="radio-group">
-                        <input type="radio" name="basemap" value="terrain">
-                        <span>Terrain</span>
-                    </label>
-                </div>
-            </div>
+    <div id="map"></div>
+    
+    <div id="legend">
+        <div class="legend-header">
+            <h4 class="legend-title">Map Layers</h4>
+            <span id="toggle-legend"></span>
         </div>
-        
-        <div class="legend">
-            <h3>Legend</h3>
-            <div class="legend-item">
-                <div class="legend-color" style="background-color: #ff6b6b;"></div>
-                <span>Growth Zones</span>
+        <div id="legend-content-wrapper">
+            
+            <div class="legend-category">
+                <div class="legend-category-header">
+                    <span>Growth & Development</span>
+                </div>
+                <div class="legend-category-content">
+                    <div>
+                        <input type="checkbox" id="growth-zones" checked> 
+                        <span style="font-size: 1em;">Growth Zones</span>
+                    </div>
+                    <div>
+                        <input type="checkbox" id="housing" checked> 
+                        <span style="font-size: 1em;">Housing</span>
+                    </div>
+                    <div>
+                        <input type="checkbox" id="ptal" checked> 
+                        <span style="font-size: 1em;">PTAL (Transport Accessibility)</span>
+                    </div>
+                </div>
             </div>
-            <div class="legend-item">
-                <div class="legend-color" style="background-color: #4ecdc4;"></div>
-                <span>Housing Areas</span>
+            
+            <div class="legend-category">
+                <div class="legend-category-header">
+                    <span>Public Transport Infrastructure</span>
+                </div>
+                <div class="legend-category-content">
+                    <div>
+                        <input type="checkbox" id="bus-lines" checked> 
+                        <span style="font-size: 1em;">Bus Lines</span>
+                    </div>
+                    <div>
+                        <input type="checkbox" id="bus-stops" checked> 
+                        <span style="font-size: 1em;">Bus Stops</span>
+                    </div>
+                    <div>
+                        <input type="checkbox" id="rail-stops" checked> 
+                        <span style="font-size: 1em;">Rail Stops</span>
+                    </div>
+                </div>
             </div>
-            <div class="legend-item">
-                <div class="legend-color" style="background-color: #45b7d1;"></div>
-                <span>High PTAL Areas</span>
+            
+            <div class="legend-category">
+                <div class="legend-category-header">
+                    <span>CRSTS2 Schemes</span>
+                </div>
+                <div class="legend-category-content">
+                    <div>
+                        <input type="checkbox" id="crsts2-points" checked> 
+                        <span style="font-size: 1em;">CRSTS2 Points</span>
+                    </div>
+                    <div>
+                        <input type="checkbox" id="crsts2-lines" checked> 
+                        <span style="font-size: 1em;">CRSTS2 Lines</span>
+                    </div>
+                    <div>
+                        <input type="checkbox" id="crsts2-polygons" checked> 
+                        <span style="font-size: 1em;">CRSTS2 Polygons</span>
+                    </div>
+                </div>
             </div>
-            <div class="legend-item">
-                <div class="legend-line" style="border-color: #96ceb4;"></div>
-                <span>Bus Lines</span>
+            
+            <div class="legend-category">
+                <div class="legend-category-header">
+                    <span>Base Maps</span>
+                </div>
+                <div class="legend-category-content">
+                    <div>
+                        <input type="radio" name="basemap" value="osm" checked> 
+                        <span style="font-size: 1em;">OpenStreetMap</span>
+                    </div>
+                    <div>
+                        <input type="radio" name="basemap" value="satellite"> 
+                        <span style="font-size: 1em;">Satellite</span>
+                    </div>
+                    <div>
+                        <input type="radio" name="basemap" value="terrain"> 
+                        <span style="font-size: 1em;">Terrain</span>
+                    </div>
+                </div>
             </div>
-            <div class="legend-item">
-                <div class="legend-point" style="background-color: #feca57;"></div>
-                <span>Bus Stops</span>
+            
+            <div class="legend-category">
+                <div class="legend-category-header">
+                    <span>Symbol Legend</span>
+                </div>
+                <div class="legend-category-content">
+                    <div style="display: flex; align-items: center; margin-bottom: 5px;">
+                        <div style="width: 20px; height: 20px; background-color: #ff6b6b; border-radius: 3px; margin-right: 10px; border: 1px solid #ccc;"></div>
+                        <span style="font-size: 0.9em;">Growth Zones</span>
+                    </div>
+                    <div style="display: flex; align-items: center; margin-bottom: 5px;">
+                        <div style="width: 20px; height: 20px; background-color: #4ecdc4; border-radius: 3px; margin-right: 10px; border: 1px solid #ccc;"></div>
+                        <span style="font-size: 0.9em;">Housing Areas</span>
+                    </div>
+                    <div style="display: flex; align-items: center; margin-bottom: 5px;">
+                        <div style="width: 20px; height: 20px; background-color: #45b7d1; border-radius: 3px; margin-right: 10px; border: 1px solid #ccc;"></div>
+                        <span style="font-size: 0.9em;">High PTAL Areas</span>
+                    </div>
+                    <div style="display: flex; align-items: center; margin-bottom: 5px;">
+                        <div style="width: 20px; height: 3px; border-top: 3px solid #96ceb4; margin-right: 10px;"></div>
+                        <span style="font-size: 0.9em;">Bus Lines</span>
+                    </div>
+                    <div style="display: flex; align-items: center; margin-bottom: 5px;">
+                        <div style="width: 12px; height: 12px; background-color: #feca57; border-radius: 50%; margin-right: 10px; border: 2px solid #fff; box-shadow: 0 0 0 1px #ccc;"></div>
+                        <span style="font-size: 0.9em;">Bus Stops</span>
+                    </div>
+                    <div style="display: flex; align-items: center; margin-bottom: 5px;">
+                        <div style="width: 12px; height: 12px; background-color: #ff9ff3; border-radius: 50%; margin-right: 10px; border: 2px solid #fff; box-shadow: 0 0 0 1px #ccc;"></div>
+                        <span style="font-size: 0.9em;">Rail Stops</span>
+                    </div>
+                    <div style="display: flex; align-items: center; margin-bottom: 5px;">
+                        <div style="width: 20px; height: 20px; background-color: #54a0ff; border-radius: 3px; margin-right: 10px; border: 1px solid #ccc;"></div>
+                        <span style="font-size: 0.9em;">CRSTS2 Schemes</span>
+                    </div>
+                </div>
             </div>
-            <div class="legend-item">
-                <div class="legend-point" style="background-color: #ff9ff3;"></div>
-                <span>Rail Stops</span>
-            </div>
-            <div class="legend-item">
-                <div class="legend-color" style="background-color: #54a0ff;"></div>
-                <span>CRSTS2 Schemes</span>
-            </div>
+            
         </div>
     </div>
     
