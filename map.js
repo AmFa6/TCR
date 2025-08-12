@@ -4,10 +4,10 @@ let layerGroups = {};
 let baseMaps = {};
 
 // Initialize map when page loads
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', async function() {
     initializeMap();
     setupLegendControls();
-    loadSampleData();
+    await loadSampleData();
 });
 
 function initializeMap() {
@@ -118,21 +118,175 @@ function toCamelCase(str) {
     }).replace(/^-/, '');
 }
 
-function loadSampleData() {
-    // Create sample Growth Zones
-    createSampleGrowthZones();
+// Function to transform British National Grid coordinates to WGS84
+function transformCoordinates(coords) {
+    // This is a simplified transformation for the Bristol area
+    // For production, use a proper coordinate transformation library like proj4js
+    const easting = coords[0];
+    const northing = coords[1];
     
-    // Create sample Housing data
-    createSampleHousing();
+    // Approximate transformation for Bristol area (EPSG:27700 to EPSG:4326)
+    // Constants for British National Grid to WGS84 transformation (approximate for Bristol area)
+    const falseEasting = 400000;
+    const falseNorthing = -100000;
+    const scale = 0.9996012717;
+    const centralMeridian = -2.0;
+    const latitudeOfOrigin = 49.0;
     
-    // Create sample PTAL data
-    createSamplePTAL();
+    // Simplified transformation - for production use proj4js
+    const x = (easting - 400000) / 111319.5;
+    const y = (northing - 100000) / 111319.5;
     
-    // Create sample Transport Infrastructure
-    createSampleTransportInfrastructure();
+    const lon = x * scale + centralMeridian;
+    const lat = y * scale + latitudeOfOrigin;
     
-    // Create sample CRSTS2 data
-    createSampleCRSTS2();
+    return [lon, lat];
+}
+
+// Function to transform GeoJSON coordinates
+function transformGeoJSON(geojson) {
+    const transformed = JSON.parse(JSON.stringify(geojson));
+    
+    transformed.features.forEach(feature => {
+        if (feature.geometry.type === 'Point') {
+            feature.geometry.coordinates = transformCoordinates(feature.geometry.coordinates);
+        } else if (feature.geometry.type === 'MultiLineString') {
+            feature.geometry.coordinates = feature.geometry.coordinates.map(lineString =>
+                lineString.map(coord => transformCoordinates(coord))
+            );
+        } else if (feature.geometry.type === 'LineString') {
+            feature.geometry.coordinates = feature.geometry.coordinates.map(coord => 
+                transformCoordinates(coord)
+            );
+        } else if (feature.geometry.type === 'Polygon') {
+            feature.geometry.coordinates = feature.geometry.coordinates.map(ring =>
+                ring.map(coord => transformCoordinates(coord))
+            );
+        } else if (feature.geometry.type === 'MultiPolygon') {
+            feature.geometry.coordinates = feature.geometry.coordinates.map(polygon =>
+                polygon.map(ring => ring.map(coord => transformCoordinates(coord)))
+            );
+        }
+    });
+    
+    return transformed;
+}
+
+async function loadSampleData() {
+    // Load real GeoJSON data files
+    await loadGrowthZones();
+    await loadHousingData(); 
+    await loadPTALData();
+    await loadTransportInfrastructure();
+    await loadCRSTS2Data();
+}
+
+// Load Growth Zones data
+async function loadGrowthZones() {
+    try {
+        const response = await fetch('./data/growth-zones.geojson');
+        const data = await response.json();
+        const transformedData = transformGeoJSON(data);
+        
+        L.geoJSON(transformedData, {
+            style: {
+                fillColor: '#ff6b6b',
+                weight: 2,
+                opacity: 1,
+                color: '#ff4757',
+                fillOpacity: 0.3
+            },
+            onEachFeature: function(feature, layer) {
+                let popupContent = '<div class="taf-popup">';
+                popupContent += '<div class="popup-header">Growth Zone</div>';
+                popupContent += '<table class="popup-table">';
+                popupContent += '<tr><td><strong>Name:</strong></td><td>' + (feature.properties.Name || 'N/A') + '</td></tr>';
+                popupContent += '<tr><td><strong>Growth Type:</strong></td><td>' + (feature.properties.GrowthType || 'N/A') + '</td></tr>';
+                popupContent += '</table></div>';
+                layer.bindPopup(popupContent);
+            }
+        }).addTo(layerGroups.growthZones);
+    } catch (error) {
+        console.error('Error loading growth zones:', error);
+    }
+}
+
+// Load Housing data
+async function loadHousingData() {
+    try {
+        const response = await fetch('./data/housing.geojson');
+        const data = await response.json();
+        const transformedData = transformGeoJSON(data);
+        
+        L.geoJSON(transformedData, {
+            style: {
+                fillColor: '#4ecdc4',
+                weight: 2,
+                opacity: 1,
+                color: '#26d0ce',
+                fillOpacity: 0.3
+            },
+            onEachFeature: function(feature, layer) {
+                let popupContent = '<div class="taf-popup">';
+                popupContent += '<div class="popup-header">Housing</div>';
+                popupContent += '<table class="popup-table">';
+                Object.keys(feature.properties).forEach(key => {
+                    if (feature.properties[key] !== null) {
+                        popupContent += '<tr><td><strong>' + key + ':</strong></td><td>' + feature.properties[key] + '</td></tr>';
+                    }
+                });
+                popupContent += '</table></div>';
+                layer.bindPopup(popupContent);
+            }
+        }).addTo(layerGroups.housing);
+    } catch (error) {
+        console.error('Error loading housing data:', error);
+    }
+}
+
+// Load PTAL data
+async function loadPTALData() {
+    try {
+        const response = await fetch('./data/ptal.geojson');
+        const data = await response.json();
+        const transformedData = transformGeoJSON(data);
+        
+        L.geoJSON(transformedData, {
+            style: function(feature) {
+                // Color based on PTAL level if available
+                const ptalLevel = feature.properties.PTAL || feature.properties.ptal || 1;
+                const colors = {
+                    1: '#d73027',
+                    2: '#f46d43', 
+                    3: '#fdae61',
+                    4: '#fee08b',
+                    5: '#d9ef8b',
+                    6: '#a6d96a'
+                };
+                return {
+                    fillColor: colors[ptalLevel] || '#ffffcc',
+                    weight: 1,
+                    opacity: 1,
+                    color: '#333',
+                    fillOpacity: 0.4
+                };
+            },
+            onEachFeature: function(feature, layer) {
+                let popupContent = '<div class="taf-popup">';
+                popupContent += '<div class="popup-header">PTAL (Public Transport Accessibility Level)</div>';
+                popupContent += '<table class="popup-table">';
+                Object.keys(feature.properties).forEach(key => {
+                    if (feature.properties[key] !== null) {
+                        popupContent += '<tr><td><strong>' + key + ':</strong></td><td>' + feature.properties[key] + '</td></tr>';
+                    }
+                });
+                popupContent += '</table></div>';
+                layer.bindPopup(popupContent);
+            }
+        }).addTo(layerGroups.ptal);
+    } catch (error) {
+        console.error('Error loading PTAL data:', error);
+    }
 }
 
 function createSampleGrowthZones() {
@@ -243,197 +397,190 @@ function createSamplePTAL() {
     });
 }
 
-function createSampleTransportInfrastructure() {
-    // Bus Lines
-    const busLines = [
-        {
-            name: "Metrobus m1",
-            coordinates: [[51.4584, -2.5879], [51.4400, -2.5600], [51.4200, -2.5400], [51.4000, -2.5200]],
-            operator: "First West of England"
-        },
-        {
-            name: "Metrobus m2", 
-            coordinates: [[51.4584, -2.5879], [51.4700, -2.6100], [51.4800, -2.6300], [51.4900, -2.6500]],
-            operator: "First West of England"
-        }
-    ];
-
-    busLines.forEach(line => {
-        const polyline = L.polyline(line.coordinates, {
-            color: '#96ceb4',
-            weight: 4,
-            opacity: 0.8
+async function loadTransportInfrastructure() {
+    try {
+        // Load Bus Lines
+        const busLinesResponse = await fetch('data/bus-lines.geojson');
+        const busLinesData = await busLinesResponse.json();
+        const transformedBusLines = transformGeoJSON(busLinesData);
+        
+        const busLinesLayer = L.geoJSON(transformedBusLines, {
+            style: {
+                color: '#96ceb4',
+                weight: 4,
+                opacity: 0.8
+            },
+            onEachFeature: function(feature, layer) {
+                const props = feature.properties;
+                layer.bindPopup(`
+                    <h4>Bus Route</h4>
+                    <table class="popup-table">
+                        <tr><th>Property</th><th>Value</th></tr>
+                        <tr><td>Route</td><td>${props.route || 'N/A'}</td></tr>
+                        <tr><td>Operator</td><td>${props.operator || 'N/A'}</td></tr>
+                        <tr><td>Mon AM</td><td>${props.MONAM || 'N/A'}</td></tr>
+                        <tr><td>Mon PM</td><td>${props.MONPM || 'N/A'}</td></tr>
+                    </table>
+                `);
+            }
         });
-        
-        polyline.bindPopup(`
-            <h4>${line.name}</h4>
-            <table class="popup-table">
-                <tr><th>Property</th><th>Value</th></tr>
-                <tr><td>Operator</td><td>${line.operator}</td></tr>
-            </table>
-        `);
-        
-        layerGroups.busLines.addLayer(polyline);
-    });
+        layerGroups.busLines.addLayer(busLinesLayer);
 
-    // Bus Stops
-    const busStops = [
-        { name: "Temple Meads Station", coords: [51.4490, -2.5766], routes: ["m1", "m2", "18", "42"] },
-        { name: "Cabot Circus", coords: [51.4600, -2.5850], routes: ["5", "18", "42", "620"] },
-        { name: "University of Bristol", coords: [51.4585, -2.6030], routes: ["m1", "18", "620"] },
-        { name: "Bath Spa Station", coords: [51.3758, -2.3597], routes: ["4", "7", "18"] }
-    ];
-
-    busStops.forEach(stop => {
-        const marker = L.circleMarker(stop.coords, {
-            color: '#feca57',
-            fillColor: '#feca57',
-            fillOpacity: 0.8,
-            radius: 6,
-            weight: 2
+        // Load Bus Stops
+        const busStopsResponse = await fetch('data/bus-stops.geojson');
+        const busStopsData = await busStopsResponse.json();
+        const transformedBusStops = transformGeoJSON(busStopsData);
+        
+        const busStopsLayer = L.geoJSON(transformedBusStops, {
+            pointToLayer: function(feature, latlng) {
+                return L.circleMarker(latlng, {
+                    color: '#feca57',
+                    fillColor: '#feca57',
+                    fillOpacity: 0.8,
+                    radius: 6,
+                    weight: 2
+                });
+            },
+            onEachFeature: function(feature, layer) {
+                const props = feature.properties;
+                layer.bindPopup(`
+                    <h4>${props.CommonName || 'Bus Stop'}</h4>
+                    <table class="popup-table">
+                        <tr><th>Property</th><th>Value</th></tr>
+                        <tr><td>Stop Code</td><td>${props.ATCOCode || 'N/A'}</td></tr>
+                        <tr><td>Bearing</td><td>${props.Bearing || 'N/A'}</td></tr>
+                        <tr><td>Mon AM</td><td>${props.MONAM || 'N/A'}</td></tr>
+                        <tr><td>Mon PM</td><td>${props.MONPM || 'N/A'}</td></tr>
+                    </table>
+                `);
+            }
         });
-        
-        marker.bindPopup(`
-            <h4>${stop.name}</h4>
-            <table class="popup-table">
-                <tr><th>Property</th><th>Value</th></tr>
-                <tr><td>Routes</td><td>${stop.routes.join(', ')}</td></tr>
-            </table>
-        `);
-        
-        layerGroups.busStops.addLayer(marker);
-    });
+        layerGroups.busStops.addLayer(busStopsLayer);
 
-    // Rail Stops
-    const railStops = [
-        { name: "Bristol Temple Meads", coords: [51.4490, -2.5766], type: "Major Station" },
-        { name: "Bristol Parkway", coords: [51.5105, -2.5346], type: "Parkway Station" },
-        { name: "Bath Spa", coords: [51.3758, -2.3597], type: "Major Station" },
-        { name: "Weston-super-Mare", coords: [51.3406, -2.9772], type: "Regional Station" }
-    ];
-
-    railStops.forEach(stop => {
-        const marker = L.circleMarker(stop.coords, {
-            color: '#ff9ff3',
-            fillColor: '#ff9ff3',
-            fillOpacity: 0.8,
-            radius: 8,
-            weight: 3
+        // Load Rail Stations
+        const railStationsResponse = await fetch('data/rail_stations.geojson');
+        const railStationsData = await railStationsResponse.json();
+        const transformedRailStations = transformGeoJSON(railStationsData);
+        
+        const railStationsLayer = L.geoJSON(transformedRailStations, {
+            pointToLayer: function(feature, latlng) {
+                return L.circleMarker(latlng, {
+                    color: '#ff9ff3',
+                    fillColor: '#ff9ff3',
+                    fillOpacity: 0.8,
+                    radius: 8,
+                    weight: 3
+                });
+            },
+            onEachFeature: function(feature, layer) {
+                const props = feature.properties;
+                layer.bindPopup(`
+                    <h4>${props.name || 'Rail Station'}</h4>
+                    <table class="popup-table">
+                        <tr><th>Property</th><th>Value</th></tr>
+                        <tr><td>Type</td><td>${props.type || 'Rail Station'}</td></tr>
+                        <tr><td>Operator</td><td>${props.operator || 'N/A'}</td></tr>
+                    </table>
+                `);
+            }
         });
-        
-        marker.bindPopup(`
-            <h4>${stop.name}</h4>
-            <table class="popup-table">
-                <tr><th>Property</th><th>Value</th></tr>
-                <tr><td>Type</td><td>${stop.type}</td></tr>
-            </table>
-        `);
-        
-        layerGroups.railStops.addLayer(marker);
-    });
+        layerGroups.railStops.addLayer(railStationsLayer);
+
+    } catch (error) {
+        console.error('Error loading transport infrastructure:', error);
+    }
 }
 
-function createSampleCRSTS2() {
-    // CRSTS2 Points
-    const crsts2Points = [
-        { name: "Bus Stop Upgrade - Temple St", coords: [51.4550, -2.5800], scheme: "Bus Infrastructure", budget: "£50k" },
-        { name: "Cycle Hub - Castle St", coords: [51.4520, -2.5900], scheme: "Active Travel", budget: "£120k" },
-        { name: "Junction Improvement - Old Market", coords: [51.4600, -2.5750], scheme: "Traffic Management", budget: "£200k" }
-    ];
-
-    crsts2Points.forEach(point => {
-        const marker = L.circleMarker(point.coords, {
-            color: '#54a0ff',
-            fillColor: '#54a0ff',
-            fillOpacity: 0.7,
-            radius: 8,
-            weight: 2
+async function loadCRSTS2Data() {
+    try {
+        // Load CRSTS2 Points
+        const crsts2PointsResponse = await fetch('data/schemes_pt.geojson');
+        const crsts2PointsData = await crsts2PointsResponse.json();
+        const transformedCRSTS2Points = transformGeoJSON(crsts2PointsData);
+        
+        const crsts2PointsLayer = L.geoJSON(transformedCRSTS2Points, {
+            pointToLayer: function(feature, latlng) {
+                return L.circleMarker(latlng, {
+                    color: '#54a0ff',
+                    fillColor: '#54a0ff',
+                    fillOpacity: 0.7,
+                    radius: 8,
+                    weight: 2
+                });
+            },
+            onEachFeature: function(feature, layer) {
+                const props = feature.properties;
+                layer.bindPopup(`
+                    <h4>${props.name || 'CRSTS2 Point'}</h4>
+                    <table class="popup-table">
+                        <tr><th>Property</th><th>Value</th></tr>
+                        <tr><td>Scheme</td><td>${props.scheme || 'N/A'}</td></tr>
+                        <tr><td>Type</td><td>${props.type || 'N/A'}</td></tr>
+                        <tr><td>Status</td><td>${props.status || 'N/A'}</td></tr>
+                    </table>
+                `);
+            }
         });
-        
-        marker.bindPopup(`
-            <h4>${point.name}</h4>
-            <table class="popup-table">
-                <tr><th>Property</th><th>Value</th></tr>
-                <tr><td>Scheme</td><td>${point.scheme}</td></tr>
-                <tr><td>Budget</td><td>${point.budget}</td></tr>
-            </table>
-        `);
-        
-        layerGroups.crsts2Points.addLayer(marker);
-    });
+        layerGroups.crsts2Points.addLayer(crsts2PointsLayer);
 
-    // CRSTS2 Lines
-    const crsts2Lines = [
-        {
-            name: "Cycle Route Extension - Phase 1",
-            coordinates: [[51.4584, -2.5879], [51.4650, -2.5950], [51.4700, -2.6000]],
-            scheme: "Active Travel",
-            length: "2.5km"
-        },
-        {
-            name: "Bus Lane - A4 Corridor",
-            coordinates: [[51.4400, -2.5600], [51.4500, -2.5500], [51.4600, -2.5400]],
-            scheme: "Bus Priority",
-            length: "3.2km"
-        }
-    ];
-
-    crsts2Lines.forEach(line => {
-        const polyline = L.polyline(line.coordinates, {
-            color: '#54a0ff',
-            weight: 5,
-            opacity: 0.8,
-            dashArray: '10, 5'
+        // Load CRSTS2 Lines
+        const crsts2LinesResponse = await fetch('data/schemes_ln.geojson');
+        const crsts2LinesData = await crsts2LinesResponse.json();
+        const transformedCRSTS2Lines = transformGeoJSON(crsts2LinesData);
+        
+        const crsts2LinesLayer = L.geoJSON(transformedCRSTS2Lines, {
+            style: {
+                color: '#54a0ff',
+                weight: 5,
+                opacity: 0.8,
+                dashArray: '10, 5'
+            },
+            onEachFeature: function(feature, layer) {
+                const props = feature.properties;
+                layer.bindPopup(`
+                    <h4>${props.name || 'CRSTS2 Line'}</h4>
+                    <table class="popup-table">
+                        <tr><th>Property</th><th>Value</th></tr>
+                        <tr><td>Scheme</td><td>${props.scheme || 'N/A'}</td></tr>
+                        <tr><td>Type</td><td>${props.type || 'N/A'}</td></tr>
+                        <tr><td>Length</td><td>${props.length || 'N/A'}</td></tr>
+                    </table>
+                `);
+            }
         });
-        
-        polyline.bindPopup(`
-            <h4>${line.name}</h4>
-            <table class="popup-table">
-                <tr><th>Property</th><th>Value</th></tr>
-                <tr><td>Scheme</td><td>${line.scheme}</td></tr>
-                <tr><td>Length</td><td>${line.length}</td></tr>
-            </table>
-        `);
-        
-        layerGroups.crsts2Lines.addLayer(polyline);
-    });
+        layerGroups.crsts2Lines.addLayer(crsts2LinesLayer);
 
-    // CRSTS2 Polygons
-    const crsts2Polygons = [
-        {
-            name: "Public Realm Improvement - Queen Square",
-            coordinates: [[51.4550, -2.5950], [51.4560, -2.5940], [51.4555, -2.5930], [51.4545, -2.5940], [51.4550, -2.5950]],
-            scheme: "Public Realm",
-            area: "0.8 hectares"
-        },
-        {
-            name: "Transport Hub Development - Temple Quarter",
-            coordinates: [[51.4485, -2.5770], [51.4495, -2.5760], [51.4490, -2.5750], [51.4480, -2.5760], [51.4485, -2.5770]],
-            scheme: "Integrated Transport",
-            area: "1.2 hectares"
-        }
-    ];
-
-    crsts2Polygons.forEach(polygon => {
-        const poly = L.polygon(polygon.coordinates, {
-            color: '#54a0ff',
-            fillColor: '#54a0ff',
-            fillOpacity: 0.3,
-            weight: 3,
-            dashArray: '5, 5'
+        // Load CRSTS2 Polygons
+        const crsts2PolygonsResponse = await fetch('data/schemes_pg.geojson');
+        const crsts2PolygonsData = await crsts2PolygonsResponse.json();
+        const transformedCRSTS2Polygons = transformGeoJSON(crsts2PolygonsData);
+        
+        const crsts2PolygonsLayer = L.geoJSON(transformedCRSTS2Polygons, {
+            style: {
+                color: '#54a0ff',
+                fillColor: '#54a0ff',
+                fillOpacity: 0.3,
+                weight: 3,
+                dashArray: '5, 5'
+            },
+            onEachFeature: function(feature, layer) {
+                const props = feature.properties;
+                layer.bindPopup(`
+                    <h4>${props.name || 'CRSTS2 Polygon'}</h4>
+                    <table class="popup-table">
+                        <tr><th>Property</th><th>Value</th></tr>
+                        <tr><td>Scheme</td><td>${props.scheme || 'N/A'}</td></tr>
+                        <tr><td>Type</td><td>${props.type || 'N/A'}</td></tr>
+                        <tr><td>Area</td><td>${props.area || 'N/A'}</td></tr>
+                    </table>
+                `);
+            }
         });
-        
-        poly.bindPopup(`
-            <h4>${polygon.name}</h4>
-            <table class="popup-table">
-                <tr><th>Property</th><th>Value</th></tr>
-                <tr><td>Scheme</td><td>${polygon.scheme}</td></tr>
-                <tr><td>Area</td><td>${polygon.area}</td></tr>
-            </table>
-        `);
-        
-        layerGroups.crsts2Polygons.addLayer(poly);
-    });
+        layerGroups.crsts2Polygons.addLayer(crsts2PolygonsLayer);
+
+    } catch (error) {
+        console.error('Error loading CRSTS2 data:', error);
+    }
 }
 
 // Add loading indicator
