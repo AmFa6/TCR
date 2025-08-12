@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TCR Interactive Map</title>
+    
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+        integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+        crossorigin=""/>
+    
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>TCR Transport and Housing Analysis Map</h1>
+            <p>Interactive map showing growth zones, transport infrastructure, and housing data</p>
+        </header>
+        
+        <div class="map-container">
+            <div id="map"></div>
+            
+            <div class="layer-control-panel">
+                <h3>Map Layers</h3>
+                
+                <div class="layer-group">
+                    <h4>Growth & Development</h4>
+                    <label class="layer-checkbox">
+                        <input type="checkbox" id="growth-zones" checked>
+                        <span>Growth Zones</span>
+                    </label>
+                    <label class="layer-checkbox">
+                        <input type="checkbox" id="housing" checked>
+                        <span>Housing</span>
+                    </label>
+                    <label class="layer-checkbox">
+                        <input type="checkbox" id="ptal" checked>
+                        <span>PTAL (Transport Accessibility)</span>
+                    </label>
+                </div>
+                
+                <div class="layer-group">
+                    <h4>Public Transport Infrastructure</h4>
+                    <label class="layer-checkbox">
+                        <input type="checkbox" id="bus-lines" checked>
+                        <span>Bus Lines</span>
+                    </label>
+                    <label class="layer-checkbox">
+                        <input type="checkbox" id="bus-stops" checked>
+                        <span>Bus Stops</span>
+                    </label>
+                    <label class="layer-checkbox">
+                        <input type="checkbox" id="rail-stops" checked>
+                        <span>Rail Stops</span>
+                    </label>
+                </div>
+                
+                <div class="layer-group">
+                    <h4>CRSTS2 Schemes</h4>
+                    <label class="layer-checkbox">
+                        <input type="checkbox" id="crsts2-points" checked>
+                        <span>CRSTS2 Points</span>
+                    </label>
+                    <label class="layer-checkbox">
+                        <input type="checkbox" id="crsts2-lines" checked>
+                        <span>CRSTS2 Lines</span>
+                    </label>
+                    <label class="layer-checkbox">
+                        <input type="checkbox" id="crsts2-polygons" checked>
+                        <span>CRSTS2 Polygons</span>
+                    </label>
+                </div>
+                
+                <div class="layer-group">
+                    <h4>Base Maps</h4>
+                    <label class="radio-group">
+                        <input type="radio" name="basemap" value="osm" checked>
+                        <span>OpenStreetMap</span>
+                    </label>
+                    <label class="radio-group">
+                        <input type="radio" name="basemap" value="satellite">
+                        <span>Satellite</span>
+                    </label>
+                    <label class="radio-group">
+                        <input type="radio" name="basemap" value="terrain">
+                        <span>Terrain</span>
+                    </label>
+                </div>
+            </div>
+        </div>
+        
+        <div class="legend">
+            <h3>Legend</h3>
+            <div class="legend-item">
+                <div class="legend-color" style="background-color: #ff6b6b;"></div>
+                <span>Growth Zones</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background-color: #4ecdc4;"></div>
+                <span>Housing Areas</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background-color: #45b7d1;"></div>
+                <span>High PTAL Areas</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-line" style="border-color: #96ceb4;"></div>
+                <span>Bus Lines</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-point" style="background-color: #feca57;"></div>
+                <span>Bus Stops</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-point" style="background-color: #ff9ff3;"></div>
+                <span>Rail Stops</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background-color: #54a0ff;"></div>
+                <span>CRSTS2 Schemes</span>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Leaflet JavaScript -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+        integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+        crossorigin=""></script>
+    
+    <!-- Custom JavaScript -->
+    <script src="map.js"></script>
+</body>
+</html>
