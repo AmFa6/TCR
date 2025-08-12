@@ -1,23 +1,18 @@
 /* TAF-style Map Layout - Clean, professional design */
 
 /* Reset and base styles */
-* {
+html, body {
+    height: 100%;
     margin: 0;
     padding: 0;
-    box-sizing: border-box;
-}
-
-body {
     font-family: 'Trebuchet MS', sans-serif;
-    margin: 0;
-    padding: 0;
-    overflow: hidden;
+    font-weight: normal;
 }
 
 /* Full-screen map container */
 #map {
-    height: 100vh;
-    width: 100vw;
+    height: 100%;
+    width: 100%;
     z-index: 1;
 }
 
@@ -29,10 +24,9 @@ body {
     padding: 5px;
     width: 250px;
     word-wrap: break-word;
-    background-color: white;
-    color: black;
+    background: white;
     border-radius: 5px;
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
     z-index: 1000;
     box-sizing: border-box;
     max-height: 80vh;
@@ -46,8 +40,6 @@ body {
     align-items: center;
     margin-bottom: 10px;
     cursor: pointer;
-    padding: 5px;
-    border-bottom: 1px solid #eee;
 }
 
 h4.legend-title {
@@ -55,8 +47,6 @@ h4.legend-title {
     margin-top: 0;
     margin-bottom: 0;
     flex-grow: 1;
-    font-family: 'Trebuchet MS', sans-serif;
-    font-weight: normal;
 }
 
 #toggle-legend {
@@ -69,7 +59,7 @@ h4.legend-title {
     margin-left: 5px;
 }
 
-#toggle-legend.collapsed:after {
+#legend.collapsed #toggle-legend:after {
     content: '\25B6';
 }
 
@@ -114,125 +104,131 @@ h4.legend-title {
     content: '\25B6';
 }
 
-.legend-category-content {
-    padding-left: 5px;
-}
-
 .legend-category-collapsed .legend-category-content {
     display: none;
 }
 
-/* Checkbox and radio button styling */
-.legend-category-content > div {
+.legend-category-content {
+    padding-left: 5px;
+}
+
+/* Base map controls */
+.basemap-controls {
+    margin-bottom: 15px;
+}
+
+.basemap-controls h5 {
+    margin-bottom: 8px;
+    font-size: 1.1em;
+    color: #333;
+}
+
+.basemap-option {
+    margin-bottom: 5px;
+}
+
+.basemap-option input[type="radio"] {
+    margin-right: 8px;
+}
+
+.basemap-option label {
+    font-size: 1em;
+    cursor: pointer;
+}
+
+/* Layer controls */
+.layer-controls {
+    margin-bottom: 15px;
+}
+
+.layer-controls h5 {
+    margin-bottom: 8px;
+    font-size: 1.1em;
+    color: #333;
+    border-bottom: 1px solid #ddd;
+    padding-bottom: 3px;
+}
+
+.layer-item {
+    margin-bottom: 6px;
     display: flex;
     align-items: center;
-    margin-bottom: 8px;
-    padding: 2px;
 }
 
-.legend-category-content input[type="checkbox"],
-.legend-category-content input[type="radio"] {
+.layer-item input[type="checkbox"] {
     margin-right: 8px;
-    cursor: pointer;
     width: auto;
-    height: auto;
 }
 
-.legend-category-content span {
-    cursor: pointer;
+.layer-item label {
     font-size: 1em;
+    cursor: pointer;
+    flex-grow: 1;
+}
+
+/* Color legend for data layers */
+.color-legend {
+    margin-top: 10px;
+}
+
+.color-legend-item {
+    display: flex;
+    align-items: center;
+    margin-bottom: 4px;
+}
+
+.color-swatch {
+    width: 20px;
+    height: 15px;
+    margin-right: 8px;
+    border: 1px solid #ccc;
+    display: inline-block;
+}
+
+.legend-text {
+    font-size: 0.9em;
     color: #333;
 }
 
-.legend-category-content > div:hover {
-    background-color: #f8f9fa;
-    border-radius: 3px;
-}
-
-/* Collapsed legend styling */
-#legend.collapsed {
-    width: auto;
-    padding: 10px;
-}
-
-#legend.collapsed #legend-content-wrapper {
-    display: none;
-}
-
-/* Popup styling (TAF style) */
-.leaflet-popup-content-wrapper {
-    border-radius: 8px;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-}
-
-.leaflet-popup-content {
-    margin: 12px 16px;
-    font-size: 0.9rem;
+/* Popup styling to match TAF */
+.taf-popup {
     font-family: 'Trebuchet MS', sans-serif;
+    min-width: 200px;
 }
 
-.leaflet-popup-content h4 {
-    color: #333;
+.popup-header {
+    font-weight: bold;
+    font-size: 1.1em;
     margin-bottom: 8px;
-    font-size: 1rem;
-    font-family: 'Trebuchet MS', sans-serif;
+    padding-bottom: 5px;
+    border-bottom: 1px solid #ddd;
+    color: #333;
 }
 
-/* Popup table styling */
 .popup-table {
     width: 100%;
     border-collapse: collapse;
-    margin-top: 8px;
+    font-size: 0.9em;
 }
 
-.popup-table th, .popup-table td {
-    padding: 4px;
-    border: 1px solid #ddd;
-    font-size: 12px;
-    text-align: left;
+.popup-table td {
+    padding: 3px 5px;
+    border-bottom: 1px solid #eee;
+    vertical-align: top;
 }
 
-.popup-table th {
-    background-color: #f2f2f2;
+.popup-table td:first-child {
     font-weight: bold;
+    color: #555;
+    width: 40%;
 }
 
-/* Responsive design */
-@media (max-width: 768px) {
-    #legend {
-        width: 200px;
-        top: 5px;
-        right: 5px;
-        padding: 8px;
-        max-height: 60vh;
-    }
-    
-    h4.legend-title {
-        font-size: 1.1em;
-    }
-    
-    .legend-category-header {
-        font-size: 1em;
-    }
-    
-    .legend-category-content span {
-        font-size: 0.9em;
-    }
+.popup-table td:last-child {
+    color: #333;
 }
 
-@media (max-width: 480px) {
-    #legend {
-        width: 180px;
-        max-height: 50vh;
-    }
-    
-    h4.legend-title {
-        font-size: 1em;
-    }
-    
-    .legend-category-header {
-        font-size: 0.95em;
-    }
+.popup-table tr:last-child td {
+    border-bottom: none;
 }
 
 /* Loading indicator */
@@ -241,27 +237,78 @@ h4.legend-title {
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
-    font-size: 1.1rem;
-    color: #333;
-    z-index: 1000;
-    background: white;
+    background: rgba(255, 255, 255, 0.9);
     padding: 20px;
     border-radius: 5px;
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
     font-family: 'Trebuchet MS', sans-serif;
+    font-size: 1.1em;
+    z-index: 2000;
 }
 
-/* Legend symbol styles for better visibility */
-.legend-category-content div[style*="background-color"] {
-    border: 1px solid #ccc;
+/* Responsive design */
+@media (max-width: 768px) {
+    #legend {
+        width: 200px;
+        right: 5px;
+        top: 5px;
+        max-height: 70vh;
+    }
+    
+    .legend-title {
+        font-size: 1.1em;
+    }
+    
+    .layer-item label,
+    .basemap-option label {
+        font-size: 0.9em;
+    }
+}
+
+@media (max-width: 480px) {
+    #legend {
+        width: 180px;
+        font-size: 0.9em;
+    }
+    
+    .popup-table {
+        font-size: 0.8em;
+    }
+}
+
+/* Hide legend content when collapsed */
+#legend.collapsed #legend-content-wrapper {
+    display: none;
+}
+
+/* Leaflet control styling adjustments */
+.leaflet-control-zoom {
+    box-shadow: 0 1px 5px rgba(0, 0, 0, 0.4);
+}
+
+.leaflet-control-scale {
+    background: rgba(255, 255, 255, 0.8);
     border-radius: 3px;
+    padding: 2px 5px;
 }
 
-/* Ensure proper z-index layering */
-.leaflet-control-container {
-    z-index: 999;
+/* Custom button styling for potential future use */
+.btn {
+    padding: 8px 12px;
+    background-color: #4CAF50;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-family: 'Trebuchet MS', sans-serif;
+    font-size: 0.9em;
 }
 
-.leaflet-popup {
-    z-index: 1001;
+.btn:hover {
+    background-color: #45a049;
+}
+
+.btn:disabled {
+    background-color: #ccc;
+    cursor: not-allowed;
 }

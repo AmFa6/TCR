@@ -1,0 +1,267 @@
+/* TAF-style Map Layout - Clean, professional design */
+
+/* Reset and base styles */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Trebuchet MS', sans-serif;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+}
+
+/* Full-screen map container */
+#map {
+    height: 100vh;
+    width: 100vw;
+    z-index: 1;
+}
+
+/* Right-side legend panel (TAF style) */
+#legend {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    padding: 5px;
+    width: 250px;
+    word-wrap: break-word;
+    background-color: white;
+    color: black;
+    border-radius: 5px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+    z-index: 1000;
+    box-sizing: border-box;
+    max-height: 80vh;
+    overflow-y: auto;
+}
+
+/* Legend header styling */
+.legend-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+    cursor: pointer;
+    padding: 5px;
+    border-bottom: 1px solid #eee;
+}
+
+h4.legend-title {
+    font-size: 1.2em; 
+    margin-top: 0;
+    margin-bottom: 0;
+    flex-grow: 1;
+    font-family: 'Trebuchet MS', sans-serif;
+    font-weight: normal;
+}
+
+#toggle-legend {
+    display: inline-block;
+}
+
+#toggle-legend:after {
+    content: '\25BC';
+    font-size: 1.2em;
+    margin-left: 5px;
+}
+
+#toggle-legend.collapsed:after {
+    content: '\25B6';
+}
+
+/* Legend categories */
+.legend-category {
+    margin-bottom: 10px;
+    border-bottom: 1px solid #eee;
+    padding-bottom: 5px;
+}
+
+.legend-category:last-child {
+    border-bottom: none;
+}
+
+.legend-category-header {
+    cursor: pointer;
+    border: none;
+    text-align: left;
+    outline: none;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-family: 'Trebuchet MS', sans-serif;
+    font-weight: normal;
+    font-size: 1.1em;
+    margin-bottom: 10px;
+    padding: 3px;
+    border-radius: 3px;
+}
+
+.legend-category-header:hover {
+    background-color: #f0f0f0;
+}
+
+.legend-category-header:after {
+    content: '\25BC';
+    font-size: 0.9em;
+    margin-left: 5px;
+}
+
+.legend-category-collapsed .legend-category-header:after {
+    content: '\25B6';
+}
+
+.legend-category-content {
+    padding-left: 5px;
+}
+
+.legend-category-collapsed .legend-category-content {
+    display: none;
+}
+
+/* Checkbox and radio button styling */
+.legend-category-content > div {
+    display: flex;
+    align-items: center;
+    margin-bottom: 8px;
+    padding: 2px;
+}
+
+.legend-category-content input[type="checkbox"],
+.legend-category-content input[type="radio"] {
+    margin-right: 8px;
+    cursor: pointer;
+    width: auto;
+    height: auto;
+}
+
+.legend-category-content span {
+    cursor: pointer;
+    font-size: 1em;
+    color: #333;
+}
+
+.legend-category-content > div:hover {
+    background-color: #f8f9fa;
+    border-radius: 3px;
+}
+
+/* Collapsed legend styling */
+#legend.collapsed {
+    width: auto;
+    padding: 10px;
+}
+
+#legend.collapsed #legend-content-wrapper {
+    display: none;
+}
+
+/* Popup styling (TAF style) */
+.leaflet-popup-content-wrapper {
+    border-radius: 8px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+.leaflet-popup-content {
+    margin: 12px 16px;
+    font-size: 0.9rem;
+    font-family: 'Trebuchet MS', sans-serif;
+}
+
+.leaflet-popup-content h4 {
+    color: #333;
+    margin-bottom: 8px;
+    font-size: 1rem;
+    font-family: 'Trebuchet MS', sans-serif;
+}
+
+/* Popup table styling */
+.popup-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 8px;
+}
+
+.popup-table th, .popup-table td {
+    padding: 4px;
+    border: 1px solid #ddd;
+    font-size: 12px;
+    text-align: left;
+}
+
+.popup-table th {
+    background-color: #f2f2f2;
+    font-weight: bold;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+    #legend {
+        width: 200px;
+        top: 5px;
+        right: 5px;
+        padding: 8px;
+        max-height: 60vh;
+    }
+    
+    h4.legend-title {
+        font-size: 1.1em;
+    }
+    
+    .legend-category-header {
+        font-size: 1em;
+    }
+    
+    .legend-category-content span {
+        font-size: 0.9em;
+    }
+}
+
+@media (max-width: 480px) {
+    #legend {
+        width: 180px;
+        max-height: 50vh;
+    }
+    
+    h4.legend-title {
+        font-size: 1em;
+    }
+    
+    .legend-category-header {
+        font-size: 0.95em;
+    }
+}
+
+/* Loading indicator */
+.loading {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 1.1rem;
+    color: #333;
+    z-index: 1000;
+    background: white;
+    padding: 20px;
+    border-radius: 5px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+    font-family: 'Trebuchet MS', sans-serif;
+}
+
+/* Legend symbol styles for better visibility */
+.legend-category-content div[style*="background-color"] {
+    border: 1px solid #ccc;
+    border-radius: 3px;
+}
+
+/* Ensure proper z-index layering */
+.leaflet-control-container {
+    z-index: 999;
+}
+
+.leaflet-popup {
+    z-index: 1001;
+}

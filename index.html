@@ -89,7 +89,11 @@
                 </div>
                 <div class="legend-category-content">
                     <div>
-                        <input type="radio" name="basemap" value="osm" checked> 
+                        <input type="radio" name="basemap" value="light" checked> 
+                        <span style="font-size: 1em;">Light</span>
+                    </div>
+                    <div>
+                        <input type="radio" name="basemap" value="osm"> 
                         <span style="font-size: 1em;">OpenStreetMap</span>
                     </div>
                     <div>
@@ -146,6 +150,10 @@
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
         integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
         crossorigin=""></script>
+    
+    <!-- Proj4 for coordinate transformations -->
+    <script src="https://unpkg.com/proj4@2.9.0/dist/proj4.js"></script>
+    <script src="https://unpkg.com/proj4leaflet@1.0.2/dist/proj4leaflet.min.js"></script>
     
     <!-- Custom JavaScript -->
     <script src="map.js"></script>

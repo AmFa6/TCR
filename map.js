@@ -11,10 +11,10 @@ document.addEventListener('DOMContentLoaded', async function() {
 });
 
 function initializeMap() {
-    // Initialize map centered on West of England area (approximate coordinates)
+    // Initialize map centered on West of England area (Bristol coordinates)
     map = L.map('map').setView([51.4545, -2.5879], 11);
 
-    // Define base map layers
+    // Define base map layers (similar to TAF)
     baseMaps.osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         maxZoom: 19,
         attribution: '© OpenStreetMap contributors'
@@ -22,16 +22,29 @@ function initializeMap() {
 
     baseMaps.satellite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
         maxZoom: 19,
-        attribution: 'Tiles © Esri'
+        attribution: 'Tiles © Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community'
     });
 
     baseMaps.terrain = L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {
         maxZoom: 17,
-        attribution: 'Map data: © OpenStreetMap contributors, SRTM | Map style: © OpenTopoMap'
+        attribution: 'Map data: © OpenStreetMap contributors, SRTM | Map style: © OpenTopoMap (CC-BY-SA)'
     });
 
-    // Add default base map
-    baseMaps.osm.addTo(map);
+    // Add CartoDB Positron (light background like TAF)
+    baseMaps.light = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+        maxZoom: 19,
+        attribution: '© OpenStreetMap contributors © CARTO',
+        subdomains: 'abcd'
+    });
+
+    // Add default base map (light theme like TAF)
+    baseMaps.light.addTo(map);
+
+    // Create map panes for layer ordering (similar to TAF)
+    map.createPane('boundaryLayers').style.zIndex = 300;
+    map.createPane('dataLayers').style.zIndex = 400;
+    map.createPane('transportLayers').style.zIndex = 500;
+    map.createPane('pointLayers').style.zIndex = 600;
 
     // Initialize layer groups
     layerGroups.growthZones = L.layerGroup().addTo(map);
@@ -118,53 +131,56 @@ function toCamelCase(str) {
     }).replace(/^-/, '');
 }
 
-// Function to transform British National Grid coordinates to WGS84
+// Function to transform British National Grid coordinates to WGS84 using proj4
 function transformCoordinates(coords) {
-    // This is a simplified transformation for the Bristol area
-    // For production, use a proper coordinate transformation library like proj4js
-    const easting = coords[0];
-    const northing = coords[1];
+    // Define British National Grid (EPSG:27700) projection
+    proj4.defs('EPSG:27700', '+proj=tmerc +lat_0=49 +lon_0=-2 +k=0.9996012717 +x_0=400000 +y_0=-100000 +ellps=airy +towgs84=446.448,-125.157,542.06,0.15,0.247,0.842,-20.489 +units=m +no_defs');
     
-    // Approximate transformation for Bristol area (EPSG:27700 to EPSG:4326)
-    // Constants for British National Grid to WGS84 transformation (approximate for Bristol area)
-    const falseEasting = 400000;
-    const falseNorthing = -100000;
-    const scale = 0.9996012717;
-    const centralMeridian = -2.0;
-    const latitudeOfOrigin = 49.0;
+    // Check if coordinates are already in WGS84 (rough check)
+    if (coords[0] >= -180 && coords[0] <= 180 && coords[1] >= -90 && coords[1] <= 90) {
+        // Already in WGS84, return as is
+        return coords;
+    }
     
-    // Simplified transformation - for production use proj4js
-    const x = (easting - 400000) / 111319.5;
-    const y = (northing - 100000) / 111319.5;
-    
-    const lon = x * scale + centralMeridian;
-    const lat = y * scale + latitudeOfOrigin;
-    
-    return [lon, lat];
+    // Transform from British National Grid to WGS84
+    const transformed = proj4('EPSG:27700', 'EPSG:4326', coords);
+    return [transformed[1], transformed[0]]; // Return as [lat, lng] for Leaflet
 }
 
-// Function to transform GeoJSON coordinates
+// Function to detect coordinate system and transform GeoJSON coordinates
 function transformGeoJSON(geojson) {
     const transformed = JSON.parse(JSON.stringify(geojson));
     
     transformed.features.forEach(feature => {
         if (feature.geometry.type === 'Point') {
-            feature.geometry.coordinates = transformCoordinates(feature.geometry.coordinates);
+            const coords = feature.geometry.coordinates;
+            const transformedCoords = transformCoordinates(coords);
+            feature.geometry.coordinates = [transformedCoords[1], transformedCoords[0]]; // [lng, lat] for GeoJSON
         } else if (feature.geometry.type === 'MultiLineString') {
             feature.geometry.coordinates = feature.geometry.coordinates.map(lineString =>
-                lineString.map(coord => transformCoordinates(coord))
+                lineString.map(coord => {
+                    const transformed = transformCoordinates(coord);
+                    return [transformed[1], transformed[0]]; // [lng, lat] for GeoJSON
+                })
             );
         } else if (feature.geometry.type === 'LineString') {
-            feature.geometry.coordinates = feature.geometry.coordinates.map(coord => 
-                transformCoordinates(coord)
-            );
+            feature.geometry.coordinates = feature.geometry.coordinates.map(coord => {
+                const transformed = transformCoordinates(coord);
+                return [transformed[1], transformed[0]]; // [lng, lat] for GeoJSON
+            });
         } else if (feature.geometry.type === 'Polygon') {
             feature.geometry.coordinates = feature.geometry.coordinates.map(ring =>
-                ring.map(coord => transformCoordinates(coord))
+                ring.map(coord => {
+                    const transformed = transformCoordinates(coord);
+                    return [transformed[1], transformed[0]]; // [lng, lat] for GeoJSON
+                })
             );
         } else if (feature.geometry.type === 'MultiPolygon') {
             feature.geometry.coordinates = feature.geometry.coordinates.map(polygon =>
-                polygon.map(ring => ring.map(coord => transformCoordinates(coord)))
+                polygon.map(ring => ring.map(coord => {
+                    const transformed = transformCoordinates(coord);
+                    return [transformed[1], transformed[0]]; // [lng, lat] for GeoJSON
+                }))
             );
         }
     });
