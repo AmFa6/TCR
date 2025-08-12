@@ -234,11 +234,11 @@ async function loadPTALData() {
         
         L.geoJSON(transformedData, {
             style: function(feature) {
-                // PTAL categories: 1a (dark blue), 1b (blue), 2 (light blue), 3 (green), 4 (yellow), 5 (orange), 6a (red), 6b (dark red)
+                // PTAL categories: 0 and 1a (dark blue), 1b (blue), 2 (light blue), 3 (green), 4 (yellow), 5 (orange), 6a (red), 6b (dark red)
                 // Fallback to green/yellow if not matched
                 const ptal = (feature.properties.PTAL || feature.properties.ptal || '').toString().toLowerCase();
                 let fillColor = '#cccccc';
-                if (ptal === '1a') fillColor = '#08306b'; // dark blue
+                if (ptal === '0' || ptal === '1a') fillColor = '#08306b'; // dark blue for both 0 and 1a
                 else if (ptal === '1b') fillColor = '#2171b5'; // blue
                 else if (ptal === '2') fillColor = '#6baed6'; // light blue
                 else if (ptal === '3') fillColor = '#31a354'; // green
@@ -249,9 +249,9 @@ async function loadPTALData() {
                 else fillColor = '#b2df8a'; // fallback green/yellow
                 return {
                     fillColor: fillColor,
-                    weight: 1,
-                    opacity: 1,
-                    color: '#333',
+                    weight: 0,
+                    opacity: 0,
+                    color: 'transparent',
                     fillOpacity: 0.7
                 };
             },
