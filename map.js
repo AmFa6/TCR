@@ -1,7 +1,6 @@
 // Initialize the map with TAF-style design
 let map;
 let layerGroups = {};
-let baseMaps = {};
 
 // Initialize map when page loads
 document.addEventListener('DOMContentLoaded', async function() {
@@ -14,31 +13,15 @@ function initializeMap() {
     // Initialize map centered on West of England area (Bristol coordinates)
     map = L.map('map').setView([51.4545, -2.5879], 11);
 
-    // Define base map layers (similar to TAF)
-    baseMaps.osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        maxZoom: 19,
-        attribution: '© OpenStreetMap contributors'
-    });
-
-    baseMaps.satellite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
-        maxZoom: 19,
-        attribution: 'Tiles © Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community'
-    });
-
-    baseMaps.terrain = L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {
-        maxZoom: 17,
-        attribution: 'Map data: © OpenStreetMap contributors, SRTM | Map style: © OpenTopoMap (CC-BY-SA)'
-    });
-
-    // Add CartoDB Positron (light background like TAF)
-    baseMaps.light = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+    // Add CartoDB Positron (light background) as the only base map
+    const lightBaseMap = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
         maxZoom: 19,
         attribution: '© OpenStreetMap contributors © CARTO',
         subdomains: 'abcd'
     });
 
-    // Add default base map (light theme like TAF)
-    baseMaps.light.addTo(map);
+    // Add the light base map
+    lightBaseMap.addTo(map);
 
     // Create map panes for layer ordering (similar to TAF)
     map.createPane('boundaryLayers').style.zIndex = 300;
@@ -52,10 +35,8 @@ function initializeMap() {
     layerGroups.ptal = L.layerGroup().addTo(map);
     layerGroups.busLines = L.layerGroup().addTo(map);
     layerGroups.busStops = L.layerGroup().addTo(map);
-    layerGroups.railStops = L.layerGroup().addTo(map);
-    layerGroups.crsts2Points = L.layerGroup().addTo(map);
-    layerGroups.crsts2Lines = L.layerGroup().addTo(map);
-    layerGroups.crsts2Polygons = L.layerGroup().addTo(map);
+    layerGroups.railStations = L.layerGroup().addTo(map);
+    layerGroups.tcrSchemes = L.layerGroup().addTo(map);
 
     // Add scale control
     L.control.scale({position: 'bottomleft'}).addTo(map);
@@ -104,22 +85,6 @@ function setupLegendControls() {
                 } else {
                     map.removeLayer(layerGroups[camelCaseId]);
                 }
-            }
-        });
-    });
-
-    // Base map radio buttons
-    const basemapRadios = document.querySelectorAll('input[name="basemap"]');
-    basemapRadios.forEach(radio => {
-        radio.addEventListener('change', function() {
-            // Remove all base maps
-            Object.values(baseMaps).forEach(layer => {
-                map.removeLayer(layer);
-            });
-            
-            // Add selected base map
-            if (baseMaps[this.value]) {
-                baseMaps[this.value].addTo(map);
             }
         });
     });
@@ -194,7 +159,7 @@ async function loadSampleData() {
     await loadHousingData(); 
     await loadPTALData();
     await loadTransportInfrastructure();
-    await loadCRSTS2Data();
+    await loadTCRSchemesData();
 }
 
 // Load Growth Zones data
@@ -500,21 +465,21 @@ async function loadTransportInfrastructure() {
                 `);
             }
         });
-        layerGroups.railStops.addLayer(railStationsLayer);
+        layerGroups.railStations.addLayer(railStationsLayer);
 
     } catch (error) {
         console.error('Error loading transport infrastructure:', error);
     }
 }
 
-async function loadCRSTS2Data() {
+async function loadTCRSchemesData() {
     try {
-        // Load CRSTS2 Points
-        const crsts2PointsResponse = await fetch('data/schemes_pt.geojson');
-        const crsts2PointsData = await crsts2PointsResponse.json();
-        const transformedCRSTS2Points = transformGeoJSON(crsts2PointsData);
+        // Load TCR Points
+        const tcrPointsResponse = await fetch('data/schemes_pt.geojson');
+        const tcrPointsData = await tcrPointsResponse.json();
+        const transformedTCRPoints = transformGeoJSON(tcrPointsData);
         
-        const crsts2PointsLayer = L.geoJSON(transformedCRSTS2Points, {
+        const tcrPointsLayer = L.geoJSON(transformedTCRPoints, {
             pointToLayer: function(feature, latlng) {
                 return L.circleMarker(latlng, {
                     color: '#54a0ff',
@@ -527,7 +492,7 @@ async function loadCRSTS2Data() {
             onEachFeature: function(feature, layer) {
                 const props = feature.properties;
                 layer.bindPopup(`
-                    <h4>${props.name || 'CRSTS2 Point'}</h4>
+                    <h4>${props.name || 'TCR Point Scheme'}</h4>
                     <table class="popup-table">
                         <tr><th>Property</th><th>Value</th></tr>
                         <tr><td>Scheme</td><td>${props.scheme || 'N/A'}</td></tr>
@@ -537,14 +502,14 @@ async function loadCRSTS2Data() {
                 `);
             }
         });
-        layerGroups.crsts2Points.addLayer(crsts2PointsLayer);
+        layerGroups.tcrSchemes.addLayer(tcrPointsLayer);
 
-        // Load CRSTS2 Lines
-        const crsts2LinesResponse = await fetch('data/schemes_ln.geojson');
-        const crsts2LinesData = await crsts2LinesResponse.json();
-        const transformedCRSTS2Lines = transformGeoJSON(crsts2LinesData);
+        // Load TCR Lines
+        const tcrLinesResponse = await fetch('data/schemes_ln.geojson');
+        const tcrLinesData = await tcrLinesResponse.json();
+        const transformedTCRLines = transformGeoJSON(tcrLinesData);
         
-        const crsts2LinesLayer = L.geoJSON(transformedCRSTS2Lines, {
+        const tcrLinesLayer = L.geoJSON(transformedTCRLines, {
             style: {
                 color: '#54a0ff',
                 weight: 5,
@@ -554,7 +519,7 @@ async function loadCRSTS2Data() {
             onEachFeature: function(feature, layer) {
                 const props = feature.properties;
                 layer.bindPopup(`
-                    <h4>${props.name || 'CRSTS2 Line'}</h4>
+                    <h4>${props.name || 'TCR Line Scheme'}</h4>
                     <table class="popup-table">
                         <tr><th>Property</th><th>Value</th></tr>
                         <tr><td>Scheme</td><td>${props.scheme || 'N/A'}</td></tr>
@@ -564,14 +529,14 @@ async function loadCRSTS2Data() {
                 `);
             }
         });
-        layerGroups.crsts2Lines.addLayer(crsts2LinesLayer);
+        layerGroups.tcrSchemes.addLayer(tcrLinesLayer);
 
-        // Load CRSTS2 Polygons
-        const crsts2PolygonsResponse = await fetch('data/schemes_pg.geojson');
-        const crsts2PolygonsData = await crsts2PolygonsResponse.json();
-        const transformedCRSTS2Polygons = transformGeoJSON(crsts2PolygonsData);
+        // Load TCR Polygons
+        const tcrPolygonsResponse = await fetch('data/schemes_pg.geojson');
+        const tcrPolygonsData = await tcrPolygonsResponse.json();
+        const transformedTCRPolygons = transformGeoJSON(tcrPolygonsData);
         
-        const crsts2PolygonsLayer = L.geoJSON(transformedCRSTS2Polygons, {
+        const tcrPolygonsLayer = L.geoJSON(transformedTCRPolygons, {
             style: {
                 color: '#54a0ff',
                 fillColor: '#54a0ff',
@@ -582,7 +547,7 @@ async function loadCRSTS2Data() {
             onEachFeature: function(feature, layer) {
                 const props = feature.properties;
                 layer.bindPopup(`
-                    <h4>${props.name || 'CRSTS2 Polygon'}</h4>
+                    <h4>${props.name || 'TCR Polygon Scheme'}</h4>
                     <table class="popup-table">
                         <tr><th>Property</th><th>Value</th></tr>
                         <tr><td>Scheme</td><td>${props.scheme || 'N/A'}</td></tr>
@@ -592,10 +557,10 @@ async function loadCRSTS2Data() {
                 `);
             }
         });
-        layerGroups.crsts2Polygons.addLayer(crsts2PolygonsLayer);
+        layerGroups.tcrSchemes.addLayer(tcrPolygonsLayer);
 
     } catch (error) {
-        console.error('Error loading CRSTS2 data:', error);
+        console.error('Error loading TCR schemes data:', error);
     }
 }
 
@@ -618,6 +583,5 @@ function hideLoading() {
 // Export functions for potential external use
 window.mapFunctions = {
     map,
-    layerGroups,
-    baseMaps
+    layerGroups
 };
