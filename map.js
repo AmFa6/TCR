@@ -171,11 +171,11 @@ async function loadGrowthZones() {
         
         L.geoJSON(transformedData, {
             style: {
-                fillColor: '#ff6b6b',
+                fillColor: 'transparent', // transparent fill
                 weight: 2,
                 opacity: 1,
-                color: '#ff4757',
-                fillOpacity: 0.3
+                color: '#000', // black outline
+                fillOpacity: 0 // no fill
             },
             onEachFeature: function(feature, layer) {
                 let popupContent = '<div class="taf-popup">';
@@ -201,11 +201,11 @@ async function loadHousingData() {
         
         L.geoJSON(transformedData, {
             style: {
-                fillColor: '#4ecdc4',
-                weight: 2,
+                fillColor: 'transparent',
+                weight: 1,
                 opacity: 1,
-                color: '#26d0ce',
-                fillOpacity: 0.3
+                color: '#000', // black outline
+                fillOpacity: 0
             },
             onEachFeature: function(feature, layer) {
                 let popupContent = '<div class="taf-popup">';
@@ -234,22 +234,25 @@ async function loadPTALData() {
         
         L.geoJSON(transformedData, {
             style: function(feature) {
-                // Color based on PTAL level if available
-                const ptalLevel = feature.properties.PTAL || feature.properties.ptal || 1;
-                const colors = {
-                    1: '#d73027',
-                    2: '#f46d43', 
-                    3: '#fdae61',
-                    4: '#fee08b',
-                    5: '#d9ef8b',
-                    6: '#a6d96a'
-                };
+                // PTAL categories: 1a (dark blue), 1b (blue), 2 (light blue), 3 (green), 4 (yellow), 5 (orange), 6a (red), 6b (dark red)
+                // Fallback to green/yellow if not matched
+                const ptal = (feature.properties.PTAL || feature.properties.ptal || '').toString().toLowerCase();
+                let fillColor = '#cccccc';
+                if (ptal === '1a') fillColor = '#08306b'; // dark blue
+                else if (ptal === '1b') fillColor = '#2171b5'; // blue
+                else if (ptal === '2') fillColor = '#6baed6'; // light blue
+                else if (ptal === '3') fillColor = '#31a354'; // green
+                else if (ptal === '4') fillColor = '#fed976'; // yellow
+                else if (ptal === '5') fillColor = '#fd8d3c'; // orange
+                else if (ptal === '6a') fillColor = '#e31a1c'; // red
+                else if (ptal === '6b') fillColor = '#99000d'; // dark red
+                else fillColor = '#b2df8a'; // fallback green/yellow
                 return {
-                    fillColor: colors[ptalLevel] || '#ffffcc',
+                    fillColor: fillColor,
                     weight: 1,
                     opacity: 1,
                     color: '#333',
-                    fillOpacity: 0.4
+                    fillOpacity: 0.7
                 };
             },
             onEachFeature: function(feature, layer) {
@@ -387,9 +390,9 @@ async function loadTransportInfrastructure() {
         
         const busLinesLayer = L.geoJSON(transformedBusLines, {
             style: {
-                color: '#96ceb4',
-                weight: 4,
-                opacity: 0.8
+                color: '#008000', // green
+                weight: 2,
+                opacity: 1
             },
             onEachFeature: function(feature, layer) {
                 const props = feature.properties;
@@ -415,11 +418,11 @@ async function loadTransportInfrastructure() {
         const busStopsLayer = L.geoJSON(transformedBusStops, {
             pointToLayer: function(feature, latlng) {
                 return L.circleMarker(latlng, {
-                    color: '#feca57',
-                    fillColor: '#feca57',
-                    fillOpacity: 0.8,
-                    radius: 6,
-                    weight: 2
+                    color: '#008000', // green
+                    fillColor: '#008000',
+                    fillOpacity: 1,
+                    radius: 4,
+                    weight: 1
                 });
             },
             onEachFeature: function(feature, layer) {
@@ -446,11 +449,11 @@ async function loadTransportInfrastructure() {
         const railStationsLayer = L.geoJSON(transformedRailStations, {
             pointToLayer: function(feature, latlng) {
                 return L.circleMarker(latlng, {
-                    color: '#ff9ff3',
-                    fillColor: '#ff9ff3',
-                    fillOpacity: 0.8,
-                    radius: 8,
-                    weight: 3
+                    color: '#8B4513', // brown
+                    fillColor: '#8B4513',
+                    fillOpacity: 1,
+                    radius: 5,
+                    weight: 2
                 });
             },
             onEachFeature: function(feature, layer) {
@@ -482,11 +485,11 @@ async function loadTCRSchemesData() {
         const tcrPointsLayer = L.geoJSON(transformedTCRPoints, {
             pointToLayer: function(feature, latlng) {
                 return L.circleMarker(latlng, {
-                    color: '#54a0ff',
-                    fillColor: '#54a0ff',
-                    fillOpacity: 0.7,
-                    radius: 8,
-                    weight: 2
+                    color: '#ff00ff', // magenta
+                    fillColor: '#ff00ff',
+                    fillOpacity: 1,
+                    radius: 3,
+                    weight: 0.5
                 });
             },
             onEachFeature: function(feature, layer) {
@@ -511,10 +514,10 @@ async function loadTCRSchemesData() {
         
         const tcrLinesLayer = L.geoJSON(transformedTCRLines, {
             style: {
-                color: '#54a0ff',
-                weight: 5,
-                opacity: 0.8,
-                dashArray: '10, 5'
+                color: '#ff00ff', // magenta
+                weight: 0.5,
+                opacity: 1,
+                dashArray: '2, 2'
             },
             onEachFeature: function(feature, layer) {
                 const props = feature.properties;
@@ -538,11 +541,11 @@ async function loadTCRSchemesData() {
         
         const tcrPolygonsLayer = L.geoJSON(transformedTCRPolygons, {
             style: {
-                color: '#54a0ff',
-                fillColor: '#54a0ff',
-                fillOpacity: 0.3,
-                weight: 3,
-                dashArray: '5, 5'
+                color: '#ff00ff', // magenta
+                fillColor: 'transparent',
+                fillOpacity: 0,
+                weight: 0.5,
+                dashArray: '2, 2'
             },
             onEachFeature: function(feature, layer) {
                 const props = feature.properties;
