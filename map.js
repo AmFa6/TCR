@@ -88,6 +88,7 @@ function findLayersAtPoint(latlng, point) {
     Object.keys(layerGroups).forEach(groupName => {
         const layerGroup = layerGroups[groupName];
         
+        // Only search layers that are currently visible on the map
         if (map.hasLayer(layerGroup)) {
             // Recursively search through layers
             searchLayerGroup(layerGroup, latlng, point, groupName, foundLayers);
@@ -102,13 +103,21 @@ function searchLayerGroup(layerGroup, latlng, point, groupName, foundLayers) {
         if (layer instanceof L.LayerGroup) {
             // Recursively search nested layer groups
             searchLayerGroup(layer, latlng, point, groupName, foundLayers);
-        } else if (layer.feature) {
+        } else if (layer.feature || layer instanceof L.Marker || layer instanceof L.CircleMarker) {
             // Check if this layer contains the click point
             if (isLayerAtPoint(layer, latlng, point)) {
+                // For layers without feature property, create a basic feature object
+                const feature = layer.feature || {
+                    properties: {
+                        'Layer Type': layer.constructor.name,
+                        'Coordinates': layer.getLatLng ? `${layer.getLatLng().lat.toFixed(5)}, ${layer.getLatLng().lng.toFixed(5)}` : 'N/A'
+                    }
+                };
+                
                 foundLayers.push({
                     layer: layer,
                     groupName: groupName,
-                    feature: layer.feature
+                    feature: feature
                 });
             }
         }
@@ -116,24 +125,49 @@ function searchLayerGroup(layerGroup, latlng, point, groupName, foundLayers) {
 }
 
 function isLayerAtPoint(layer, latlng, point) {
-    // For point features
-    if (layer instanceof L.Marker || layer instanceof L.CircleMarker) {
-        const layerPoint = map.latLngToContainerPoint(layer.getLatLng());
-        const distance = Math.sqrt(
-            Math.pow(layerPoint.x - point.x, 2) + 
-            Math.pow(layerPoint.y - point.y, 2)
-        );
-        return distance <= 10; // 10 pixel tolerance
-    }
-    
-    // For polygon/line features
-    if (layer instanceof L.Polygon || layer instanceof L.Polyline) {
-        // Use Leaflet's built-in methods for geometric containment
+    try {
+        // For point features (markers, circle markers)
+        if (layer instanceof L.Marker || layer instanceof L.CircleMarker) {
+            const layerPoint = map.latLngToContainerPoint(layer.getLatLng());
+            const distance = Math.sqrt(
+                Math.pow(layerPoint.x - point.x, 2) + 
+                Math.pow(layerPoint.y - point.y, 2)
+            );
+            return distance <= 15; // 15 pixel tolerance for better detection
+        }
+        
+        // For polygon features
         if (layer instanceof L.Polygon) {
             return isPointInPolygon(latlng, layer.getLatLngs());
-        } else if (layer instanceof L.Polyline) {
+        }
+        
+        // For polyline features
+        if (layer instanceof L.Polyline && !(layer instanceof L.Polygon)) {
             return isPointNearPolyline(latlng, layer.getLatLngs(), point);
         }
+        
+        // For other layer types, try to use Leaflet's built-in bounds checking
+        if (layer.getBounds && typeof layer.getBounds === 'function') {
+            const bounds = layer.getBounds();
+            if (bounds.contains && typeof bounds.contains === 'function') {
+                return bounds.contains(latlng);
+            }
+        }
+        
+        // Fallback: check if layer has a getLatLng method (for point-like features)
+        if (layer.getLatLng && typeof layer.getLatLng === 'function') {
+            const layerLatLng = layer.getLatLng();
+            const layerPoint = map.latLngToContainerPoint(layerLatLng);
+            const distance = Math.sqrt(
+                Math.pow(layerPoint.x - point.x, 2) + 
+                Math.pow(layerPoint.y - point.y, 2)
+            );
+            return distance <= 15;
+        }
+        
+    } catch (error) {
+        console.warn('Error checking if layer is at point:', error);
+        return false;
     }
     
     return false;
@@ -331,20 +365,59 @@ function setupLegendControls() {
             
             if (layerGroups[camelCaseId]) {
                 if (this.checked) {
-                    map.addLayer(layerGroups[camelCaseId]);
+                    // Load data on-demand for heavy layers
+                    if (layerId === 'ptal') {
+                        // Check if PTAL data is already loaded
+                        if (layerGroups.ptal.getLayers().length === 0) {
+                            console.log('Loading PTAL data on-demand...');
+                            loadPTALDataAsync().then(() => {
+                                // Add layer to map after loading
+                                map.addLayer(layerGroups.ptal);
+                                // Update PTAL layer visibility based on individual checkboxes
+                                updatePTALLayer();
+                            });
+                        } else {
+                            map.addLayer(layerGroups.ptal);
+                        }
+                    } else if (layerId === 'bus-lines') {
+                        // Check if bus lines data is already loaded
+                        if (layerGroups.busLines.getLayers().length === 0) {
+                            console.log('Loading bus lines data on-demand...');
+                            loadBusLinesAsync().then(() => {
+                                map.addLayer(layerGroups.busLines);
+                            });
+                        } else {
+                            map.addLayer(layerGroups.busLines);
+                        }
+                    } else if (layerId === 'bus-stops') {
+                        // Check if bus stops data is already loaded
+                        if (layerGroups.busStops.getLayers().length === 0) {
+                            console.log('Loading bus stops data on-demand...');
+                            loadBusStopsAsync().then(() => {
+                                map.addLayer(layerGroups.busStops);
+                            });
+                        } else {
+                            map.addLayer(layerGroups.busStops);
+                        }
+                    } else {
+                        // For other layers, just add to map
+                        map.addLayer(layerGroups[camelCaseId]);
+                    }
                 } else {
                     map.removeLayer(layerGroups[camelCaseId]);
                 }
             }
             
-            // Show/hide PTAL individual controls
+            // Handle PTAL select/deselect all functionality
             if (layerId === 'ptal') {
                 // Main PTAL checkbox now acts as select/deselect all
                 const ptalCheckboxes = document.querySelectorAll('[id^="ptal-"]:not(#ptal)');
                 ptalCheckboxes.forEach(checkbox => {
                     checkbox.checked = this.checked;
                 });
-                updatePTALLayer();
+                if (this.checked && layerGroups.ptal.getLayers().length > 0) {
+                    updatePTALLayer();
+                }
             }
         });
     });
@@ -1093,18 +1166,8 @@ async function loadSampleData() {
         loadTCRSchemesData()
     ]);
     
-    // Fallback for browsers without requestIdleCallback
-    const scheduleBackgroundTask = window.requestIdleCallback || ((fn) => setTimeout(fn, 100));
-    
-    // Load heavy layers asynchronously in background without blocking UI
-    scheduleBackgroundTask(() => {
-        console.log('Starting background layer loading...');
-        loadPTALDataAsync();
-    });
-    
-    scheduleBackgroundTask(() => {
-        loadBusInfrastructureAsync();
-    });
+    // Heavy layers (PTAL, Bus Lines, Bus Stops) will only load when user checks them on
+    console.log('Default layers loaded. PTAL and bus data will load only when requested.');
 }
 
 // Load Growth Zones data
@@ -1443,6 +1506,112 @@ async function loadPTALDataAsync() {
     } catch (error) {
         hideLoadingIndicator();
         console.error('Error loading PTAL data:', error);
+    }
+}
+
+// Load bus lines data asynchronously on-demand
+async function loadBusLinesAsync() {
+    try {
+        console.log('Loading bus lines...');
+        showLoadingIndicator('Loading bus lines data...');
+        
+        const busLinesResponse = await fetch('data/bus-lines.geojson');
+        const busLinesData = await busLinesResponse.json();
+        const transformedBusLines = transformGeoJSON(busLinesData);
+        
+        // Process bus lines in chunks
+        const chunkSize = 25;
+        const busFeatures = transformedBusLines.features;
+        
+        for (let i = 0; i < busFeatures.length; i += chunkSize) {
+            const chunk = busFeatures.slice(i, i + chunkSize);
+            const chunkGeoJSON = { type: 'FeatureCollection', features: chunk };
+            
+            const chunkLayer = L.geoJSON(chunkGeoJSON, {
+                style: {
+                    color: '#008000', // green
+                    weight: 2,
+                    opacity: 1
+                },
+                onEachFeature: function(feature, layer) {
+                    const props = feature.properties;
+                    layer.bindPopup(`
+                        <h4>Bus Route</h4>
+                        <table class="popup-table">
+                            <tr><th>Property</th><th>Value</th></tr>
+                            <tr><td>Route</td><td>${props.route || 'N/A'}</td></tr>
+                            <tr><td>Operator</td><td>${props.operator || 'N/A'}</td></tr>
+                            <tr><td>Mon AM</td><td>${props.MONAM || 'N/A'}</td></tr>
+                            <tr><td>Mon PM</td><td>${props.MONPM || 'N/A'}</td></tr>
+                        </table>
+                    `);
+                }
+            });
+            
+            layerGroups.busLines.addLayer(chunkLayer);
+            await new Promise(resolve => requestAnimationFrame(resolve));
+        }
+        
+        hideLoadingIndicator();
+        console.log('Bus lines loaded successfully');
+    } catch (error) {
+        hideLoadingIndicator();
+        console.error('Error loading bus lines:', error);
+    }
+}
+
+// Load bus stops data asynchronously on-demand
+async function loadBusStopsAsync() {
+    try {
+        console.log('Loading bus stops...');
+        showLoadingIndicator('Loading bus stops data...');
+        
+        const busStopsResponse = await fetch('data/bus-stops.geojson');
+        const busStopsData = await busStopsResponse.json();
+        const transformedBusStops = transformGeoJSON(busStopsData);
+        
+        // Process bus stops in chunks
+        const chunkSize = 25;
+        const stopFeatures = transformedBusStops.features;
+        
+        for (let i = 0; i < stopFeatures.length; i += chunkSize) {
+            const chunk = stopFeatures.slice(i, i + chunkSize);
+            const chunkGeoJSON = { type: 'FeatureCollection', features: chunk };
+            
+            const chunkLayer = L.geoJSON(chunkGeoJSON, {
+                pointToLayer: function(feature, latlng) {
+                    return L.circleMarker(latlng, {
+                        color: '#008000', // green
+                        fillColor: '#008000',
+                        fillOpacity: 1,
+                        radius: 4,
+                        weight: 1
+                    });
+                },
+                onEachFeature: function(feature, layer) {
+                    const props = feature.properties;
+                    layer.bindPopup(`
+                        <h4>${props.CommonName || 'Bus Stop'}</h4>
+                        <table class="popup-table">
+                            <tr><th>Property</th><th>Value</th></tr>
+                            <tr><td>Stop Code</td><td>${props.ATCOCode || 'N/A'}</td></tr>
+                            <tr><td>Bearing</td><td>${props.Bearing || 'N/A'}</td></tr>
+                            <tr><td>Mon AM</td><td>${props.MONAM || 'N/A'}</td></tr>
+                            <tr><td>Mon PM</td><td>${props.MONPM || 'N/A'}</td></tr>
+                        </table>
+                    `);
+                }
+            });
+            
+            layerGroups.busStops.addLayer(chunkLayer);
+            await new Promise(resolve => requestAnimationFrame(resolve));
+        }
+        
+        hideLoadingIndicator();
+        console.log('Bus stops loaded successfully');
+    } catch (error) {
+        hideLoadingIndicator();
+        console.error('Error loading bus stops:', error);
     }
 }
 
