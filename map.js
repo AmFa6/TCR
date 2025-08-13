@@ -11,7 +11,9 @@ document.addEventListener('DOMContentLoaded', async function() {
 
 function initializeMap() {
     // Initialize map centered on West of England area (Bristol coordinates)
-    map = L.map('map').setView([51.4545, -2.5879], 11);
+    map = L.map('map', {
+        zoomControl: true  // Explicitly enable zoom controls
+    }).setView([51.4545, -2.5879], 11);
 
     // Add CartoDB Positron (light background) as the only base map
     const lightBaseMap = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
@@ -257,6 +259,15 @@ function setupLayerIcons() {
         });
     });
     
+    // Zoom icon handlers
+    document.querySelectorAll('.zoom-icon').forEach(icon => {
+        icon.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const layerName = e.target.getAttribute('data-layer');
+            zoomToLayer(layerName);
+        });
+    });
+    
     // Filter icon handlers
     document.querySelectorAll('.filter-icon').forEach(icon => {
         icon.addEventListener('click', (e) => {
@@ -265,6 +276,40 @@ function setupLayerIcons() {
             openFilterModal(layerName);
         });
     });
+}
+
+function zoomToLayer(layerName) {
+    const layerGroup = layerGroups[layerName.replace('-', '')]; // Convert kebab-case to camelCase
+    
+    // Alternative mapping for layers that don't follow the simple pattern
+    const layerMapping = {
+        'growth-zones': layerGroups.growthZones,
+        'housing': layerGroups.housing,
+        'ptal': layerGroups.ptal,
+        'tcr-schemes': layerGroups.tcrSchemes,
+        'bus-lines': layerGroups.busLines,
+        'bus-stops': layerGroups.busStops,
+        'rail-stations': layerGroups.railStations
+    };
+    
+    const targetLayer = layerMapping[layerName];
+    
+    if (targetLayer && targetLayer.getLayers().length > 0) {
+        // Create a feature group to get bounds
+        const group = new L.featureGroup(targetLayer.getLayers());
+        const bounds = group.getBounds();
+        
+        if (bounds.isValid()) {
+            // Zoom to the layer with some padding
+            map.fitBounds(bounds, { padding: [20, 20] });
+        } else {
+            console.warn(`No valid bounds found for layer: ${layerName}`);
+        }
+    } else {
+        console.warn(`Layer not found or empty: ${layerName}`);
+        // Fallback to default view if layer is not available
+        map.setView([51.4545, -2.5879], 11);
+    }
 }
 
 function openStylingModal(layerName) {
