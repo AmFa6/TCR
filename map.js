@@ -2,6 +2,8 @@
 let map;
 let layerGroups = {};
 let activeFilters = {}; // Store active filters per layer
+let highlightedLayer = null; // Store reference to currently highlighted layer
+let originalStyle = null; // Store original style of highlighted layer
 
 // Initialize map when page loads
 document.addEventListener('DOMContentLoaded', async function() {
@@ -61,8 +63,9 @@ function setupMultiLayerPopups() {
 }
 
 function handleMapClick(e) {
-    // Clear any existing popup
+    // Clear any existing popup and highlights
     map.closePopup();
+    removeHighlight();
     currentPopupLayers = [];
     currentPopupIndex = 0;
     activePopup = null;
@@ -82,6 +85,38 @@ function handleMapClick(e) {
     showPopupAtIndex(0, e.latlng);
 }
 
+function isLayerVisible(groupName) {
+    // Convert camelCase back to kebab-case for checkbox ID
+    const checkboxId = groupName.replace(/([A-Z])/g, '-$1').toLowerCase();
+    const checkbox = document.getElementById(checkboxId);
+    
+    // Handle special cases for nested layers
+    if (groupName === 'busLines' || groupName === 'busStops' || groupName === 'railStations') {
+        // Check both the individual layer and the transport infrastructure parent
+        const individualCheckbox = document.getElementById(checkboxId);
+        const transportCheckbox = document.getElementById('transport-infrastructure');
+        return individualCheckbox && individualCheckbox.checked && 
+               transportCheckbox && transportCheckbox.checked;
+    }
+    
+    // For PTAL subcategories, check individual PTAL checkboxes
+    if (groupName.startsWith('ptal')) {
+        const ptalMainCheckbox = document.getElementById('ptal');
+        if (!ptalMainCheckbox || !ptalMainCheckbox.checked) {
+            return false;
+        }
+        
+        // Check individual PTAL category checkboxes
+        const ptalCategories = ['ptal-0', 'ptal-1a', 'ptal-1b', 'ptal-2', 'ptal-3', 'ptal-4', 'ptal-5', 'ptal-6a', 'ptal-6b'];
+        return ptalCategories.some(categoryId => {
+            const categoryCheckbox = document.getElementById(categoryId);
+            return categoryCheckbox && categoryCheckbox.checked;
+        });
+    }
+    
+    return checkbox && checkbox.checked;
+}
+
 function findLayersAtPoint(latlng, point) {
     const foundLayers = [];
     
@@ -89,8 +124,8 @@ function findLayersAtPoint(latlng, point) {
     Object.keys(layerGroups).forEach(groupName => {
         const layerGroup = layerGroups[groupName];
         
-        // Only search layers that are currently visible on the map
-        if (map.hasLayer(layerGroup)) {
+        // Only search layers that are currently visible on the map AND have their checkbox checked
+        if (map.hasLayer(layerGroup) && isLayerVisible(groupName)) {
             // Recursively search through layers
             searchLayerGroup(layerGroup, latlng, point, groupName, foundLayers);
         }
@@ -235,6 +270,10 @@ function showPopupAtIndex(index, latlng) {
     const layerInfo = currentPopupLayers[index];
     const feature = layerInfo.feature;
     const groupName = layerInfo.groupName;
+    const layer = layerInfo.layer;
+    
+    // Highlight the feature
+    highlightFeature(layer);
     
     // Use the standardized popup content creation function
     let popupContent = createFullPopupContent(feature, groupName);
@@ -275,6 +314,11 @@ function showPopupAtIndex(index, latlng) {
     .setLatLng(latlng)
     .setContent(popupContent)
     .openOn(map);
+    
+    // Add event listener to remove highlight when popup is closed
+    activePopup.on('remove', function() {
+        removeHighlight();
+    });
 }
 
 function formatLayerName(groupName) {
@@ -285,7 +329,7 @@ function formatLayerName(groupName) {
         'busLines': 'Bus Lines',
         'busStops': 'Bus Stops',
         'railStations': 'Rail Stations',
-        'tcrSchemes': 'CRSTS2 Schemes'
+        'tcrSchemes': 'TCR Schemes'
     };
     return nameMap[groupName] || groupName;
 }
@@ -297,6 +341,10 @@ function formatPropertyName(key) {
 function formatPropertyValue(value) {
     if (typeof value === 'number') {
         return value.toLocaleString();
+    }
+    if (typeof value === 'string') {
+        // Remove � characters from string values
+        return value.replace(/�/g, '');
     }
     return value;
 }
@@ -315,6 +363,71 @@ window.nextPopup = function() {
         showPopupAtIndex(currentPopupIndex, activePopup.getLatLng());
     }
 };
+
+// Function to highlight a feature
+function highlightFeature(layer) {
+    // Remove previous highlight
+    removeHighlight();
+    
+    // Store reference to highlighted layer
+    highlightedLayer = layer;
+    
+    // Store original style
+    if (layer.options) {
+        originalStyle = {
+            color: layer.options.color,
+            fillColor: layer.options.fillColor,
+            weight: layer.options.weight,
+            opacity: layer.options.opacity,
+            fillOpacity: layer.options.fillOpacity,
+            radius: layer.options.radius
+        };
+    }
+    
+    // Apply highlight style based on layer type
+    if (layer instanceof L.CircleMarker || layer instanceof L.Marker) {
+        // For point features
+        layer.setStyle({
+            color: '#ffff00', // bright yellow
+            fillColor: '#ffff00',
+            weight: 3,
+            opacity: 1,
+            fillOpacity: 0.8,
+            radius: (layer.options.radius || 5) + 2
+        });
+    } else if (layer instanceof L.Polygon) {
+        // For polygon features
+        layer.setStyle({
+            color: '#ffff00', // bright yellow
+            fillColor: '#ffff00',
+            weight: 3,
+            opacity: 1,
+            fillOpacity: 0.3
+        });
+    } else if (layer instanceof L.Polyline) {
+        // For line features
+        layer.setStyle({
+            color: '#ffff00', // bright yellow
+            weight: 4,
+            opacity: 1
+        });
+    }
+    
+    // Bring to front
+    if (layer.bringToFront) {
+        layer.bringToFront();
+    }
+}
+
+// Function to remove highlight
+function removeHighlight() {
+    if (highlightedLayer && originalStyle) {
+        // Restore original style
+        highlightedLayer.setStyle(originalStyle);
+        highlightedLayer = null;
+        originalStyle = null;
+    }
+}
 
 function setupLegendControls() {
     // Setup legend category collapsible functionality (TAF style)
@@ -419,6 +532,9 @@ function setupLegendControls() {
     setupStylingModal();
     setupFilterModal();
     setupLayerIcons();
+    
+    // Setup drag and drop for layer reordering
+    setupLayerDragAndDrop();
 }
 
 function setupStylingModal() {
@@ -653,6 +769,159 @@ function setupLayerIcons() {
                 openFilterModal(layerName);
             }
         });
+    });
+}
+
+function setupLayerDragAndDrop() {
+    // Get the legend content wrapper
+    const legendContent = document.getElementById('legend-content-wrapper');
+    if (!legendContent) {
+        console.warn('Legend content wrapper not found');
+        return;
+    }
+    
+    // Make layer items draggable
+    const layerItems = legendContent.children;
+    
+    // Convert HTMLCollection to Array for easier manipulation
+    Array.from(layerItems).forEach((item, index) => {
+        // Skip PTAL category content since it has nested items
+        if (item.classList.contains('legend-category')) {
+            item.draggable = true;
+            item.dataset.layerOrder = index;
+        } else if (item.style && item.style.display === 'flex') {
+            // Individual layer items
+            item.draggable = true;
+            item.dataset.layerOrder = index;
+            item.style.cursor = 'move';
+        }
+        
+        // Add drag event listeners
+        item.addEventListener('dragstart', handleDragStart);
+        item.addEventListener('dragover', handleDragOver);
+        item.addEventListener('drop', handleDrop);
+        item.addEventListener('dragend', handleDragEnd);
+    });
+}
+
+let draggedElement = null;
+
+function handleDragStart(e) {
+    draggedElement = this;
+    this.style.opacity = '0.5';
+    
+    // Add visual feedback
+    this.classList.add('dragging');
+    
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/html', this.outerHTML);
+}
+
+function handleDragOver(e) {
+    if (e.preventDefault) {
+        e.preventDefault();
+    }
+    
+    e.dataTransfer.dropEffect = 'move';
+    
+    // Add visual feedback for drop zone
+    this.classList.add('drag-over');
+    
+    return false;
+}
+
+function handleDrop(e) {
+    if (e.stopPropagation) {
+        e.stopPropagation();
+    }
+    
+    if (draggedElement !== this) {
+        // Get the parent container
+        const container = this.parentNode;
+        
+        // Get all children as array
+        const children = Array.from(container.children);
+        
+        // Find indices
+        const draggedIndex = children.indexOf(draggedElement);
+        const targetIndex = children.indexOf(this);
+        
+        // Remove dragged element from DOM
+        draggedElement.parentNode.removeChild(draggedElement);
+        
+        // Insert at new position
+        if (draggedIndex < targetIndex) {
+            container.insertBefore(draggedElement, this.nextSibling);
+        } else {
+            container.insertBefore(draggedElement, this);
+        }
+        
+        // Update layer z-order on map
+        updateLayerZOrder();
+    }
+    
+    this.classList.remove('drag-over');
+    return false;
+}
+
+function handleDragEnd(e) {
+    this.style.opacity = '';
+    this.classList.remove('dragging');
+    
+    // Remove all drag-over classes
+    document.querySelectorAll('.drag-over').forEach(el => {
+        el.classList.remove('drag-over');
+    });
+    
+    draggedElement = null;
+}
+
+function updateLayerZOrder() {
+    const legendContent = document.getElementById('legend-content-wrapper');
+    const layerItems = Array.from(legendContent.children);
+    
+    // Layer mapping from HTML IDs to layer group names
+    const layerMapping = {
+        'growth-zones': 'growthZones',
+        'housing': 'housing',
+        'ptal': 'ptal',
+        'tcr-schemes': 'tcrSchemes',
+        'bus-lines': 'busLines',
+        'bus-stops': 'busStops',
+        'rail-stations': 'railStations'
+    };
+    
+    // Update z-index based on position in DOM (reverse order since last = top)
+    layerItems.forEach((item, index) => {
+        let layerId = null;
+        
+        // Get layer ID from different types of elements
+        if (item.classList.contains('legend-category')) {
+            // Handle categories like PTAL or Transport Infrastructure
+            const checkbox = item.querySelector('input[type="checkbox"]');
+            if (checkbox) {
+                layerId = checkbox.id;
+            }
+        } else {
+            // Handle individual layer items
+            const checkbox = item.querySelector('input[type="checkbox"]');
+            if (checkbox) {
+                layerId = checkbox.id;
+            }
+        }
+        
+        if (layerId && layerMapping[layerId]) {
+            const layerGroup = layerGroups[layerMapping[layerId]];
+            if (layerGroup && layerGroup.setZIndex) {
+                // Higher index = higher z-order (appears on top)
+                const zIndex = (layerItems.length - index) * 100;
+                layerGroup.setZIndex(zIndex);
+            } else if (layerGroup) {
+                // For layer groups without setZIndex, remove and re-add to map
+                map.removeLayer(layerGroup);
+                map.addLayer(layerGroup);
+            }
+        }
     });
 }
 
@@ -1188,17 +1457,17 @@ function renameTCRAttributes(properties) {
         'JLTP5_in_7': 'Type',
         'JLTP5_in_8': 'Source',
         'JLTP5_in_9': 'Delivery Scale',
-        'JLTP5_in_10': 'Cost',
-        'JLTP5_in_11': 'Funding already secured',
-        'JLTP5_in_12': 'Dependencies',
-        'JLTP5_in_13': 'Programme',
-        'JLTP5_in_14': 'Active Travel / LCWIP Package',
-        'JLTP5_in_15': 'CRSTS2',
-        'JLTP5_in_16': 'CRSTS2 Rationale',
-        'JLTP5_in_17': 'Notes / Comments',
-        'JLTP5_in_18': 'Overview',
-        'JLTP5_in_19': 'Package Ref',
-        'JLTP5_in_20': '-' // Mapped to dash as requested
+        'JLTP5_in10': 'Cost',
+        'JLTP5_in11': 'Funding already secured',
+        'JLTP5_in12': 'Dependencies',
+        'JLTP5_in13': 'Programme',
+        'JLTP5_in14': 'Active Travel / LCWIP Package',
+        'JLTP5_in15': 'CRSTS2',
+        'JLTP5_in16': 'CRSTS2 Rationale',
+        'JLTP5_in17': 'Notes / Comments',
+        'JLTP5_in18': 'Overview',
+        'JLTP5_in19': 'Package Ref',
+        'JLTP5_in20': '-' // Mapped to dash as requested
     };
     
     const renamedProperties = {};
@@ -1207,18 +1476,27 @@ function renameTCRAttributes(properties) {
         if (attributeMap.hasOwnProperty(key)) {
             const newKey = attributeMap[key];
             if (newKey !== null) { // Only include if not marked for removal
-                renamedProperties[newKey] = properties[key];
+                // Clean the value by removing � characters
+                let cleanValue = properties[key];
+                if (typeof cleanValue === 'string') {
+                    cleanValue = cleanValue.replace(/�/g, '');
+                }
+                renamedProperties[newKey] = cleanValue;
             }
         } else {
-            // Keep attributes not in the map as they are
-            renamedProperties[key] = properties[key];
+            // Keep attributes not in the map as they are, but clean them
+            let cleanValue = properties[key];
+            if (typeof cleanValue === 'string') {
+                cleanValue = cleanValue.replace(/�/g, '');
+            }
+            renamedProperties[key] = cleanValue;
         }
     });
     
     return renamedProperties;
 }
 
-// Function to create popup content showing all attributes
+// Function to create popup content showing specific attributes per layer
 function createFullPopupContent(feature, groupName, layerTitle = null) {
     let properties = feature.properties || {};
     
@@ -1227,15 +1505,77 @@ function createFullPopupContent(feature, groupName, layerTitle = null) {
         properties = renameTCRAttributes(properties);
     }
     
+    // Define which attributes to show for each layer
+    const layerAttributeFilters = {
+        'growthZones': ['Name', 'GrowthType'],
+        'housing': ['Path'], // Exclude Path - show all others
+        'ptal': ['GRID_ID', 'PTAI', 'PTAL'],
+        'railStations': ['XCoord', 'YCoord'], // Exclude XCoord and YCoord - show all others
+        'busLines': ['TUEAM', 'TUEBP', 'TUEEP', 'TUEOP', 'SATAM', 'SATBP', 'SATEP', 'SATOP', 'SUNAM', 'SUNBP', 'SUNEP', 'SUNOP'], // Only show these
+        'busStops': ['X', 'Y'] // Exclude X and Y - show all others
+    };
+    
+    // Custom attribute display names
+    const attributeDisplayNames = {
+        'TUEAM': 'Weekday AM Peak',
+        'TUEBP': 'Weekday Between Peaks',
+        'TUEEP': 'Weekday Evening Peak',
+        'TUEOP': 'Weekday Outside Peak',
+        'SATAM': 'Saturday AM Peak',
+        'SATBP': 'Saturday Between Peaks',
+        'SATEP': 'Saturday Evening Peak',
+        'SATOP': 'Saturday Outside Peak',
+        'SUNAM': 'Sunday AM Peak',
+        'SUNBP': 'Sunday Between Peaks',
+        'SUNEP': 'Sunday Evening Peak',
+        'SUNOP': 'Sunday Outside Peak'
+    };
+    
+    // Filter properties based on layer type
+    let filteredProperties = {};
+    
+    if (layerAttributeFilters[groupName]) {
+        if (groupName === 'growthZones' || groupName === 'ptal' || groupName === 'busLines') {
+            // For these layers, only show specified attributes
+            layerAttributeFilters[groupName].forEach(attr => {
+                if (properties.hasOwnProperty(attr)) {
+                    filteredProperties[attr] = properties[attr];
+                }
+            });
+        } else if (groupName === 'housing' || groupName === 'railStations' || groupName === 'busStops') {
+            // For these layers, exclude specified attributes
+            Object.keys(properties).forEach(key => {
+                if (!layerAttributeFilters[groupName].includes(key)) {
+                    filteredProperties[key] = properties[key];
+                }
+            });
+        }
+    } else {
+        // For other layers (busLines, busStops, tcrSchemes), show all attributes
+        filteredProperties = properties;
+    }
+    
     let popupContent = '<div class="taf-popup">';
     popupContent += `<div class="popup-header">${layerTitle || formatLayerName(groupName)}</div>`;
     popupContent += '<table class="popup-table">';
     
-    if (Object.keys(properties).length > 0) {
-        Object.keys(properties).forEach(key => {
-            const value = properties[key];
+    if (Object.keys(filteredProperties).length > 0) {
+        Object.keys(filteredProperties).forEach(key => {
+            const value = filteredProperties[key];
             if (value !== null && value !== undefined && value !== '') {
-                popupContent += `<tr><td><strong>${formatPropertyName(key)}:</strong></td><td>${formatPropertyValue(value)}</td></tr>`;
+                // Custom display names for specific attributes
+                let displayName = key;
+                if (attributeDisplayNames[key]) {
+                    displayName = attributeDisplayNames[key];
+                } else if (key === 'Name' && groupName === 'growthZones') {
+                    displayName = 'Name';
+                } else if (key === 'GrowthType' && groupName === 'growthZones') {
+                    displayName = 'Growth Type';
+                } else {
+                    displayName = formatPropertyName(key);
+                }
+                
+                popupContent += `<tr><td><strong>${displayName}:</strong></td><td>${formatPropertyValue(value)}</td></tr>`;
             }
         });
     } else {
@@ -1355,8 +1695,7 @@ async function loadGrowthZones() {
                 fillOpacity: 0 // no fill
             },
             onEachFeature: function(feature, layer) {
-                const popupContent = createFullPopupContent(feature, 'growthZones', 'Growth Zone');
-                layer.bindPopup(popupContent);
+                // Popup handling is managed by the central multi-layer popup system
             }
         }).addTo(layerGroups.growthZones);
     } catch (error) {
@@ -1380,8 +1719,7 @@ async function loadHousingData() {
                 fillOpacity: 0
             },
             onEachFeature: function(feature, layer) {
-                const popupContent = createFullPopupContent(feature, 'housing', 'Housing');
-                layer.bindPopup(popupContent);
+                // Popup handling is managed by the central multi-layer popup system
             }
         }).addTo(layerGroups.housing);
     } catch (error) {
@@ -1423,8 +1761,7 @@ async function loadPTALData() {
                 };
             },
             onEachFeature: function(feature, layer) {
-                const popupContent = createFullPopupContent(feature, 'ptal', 'PTAL (Public Transport Accessibility Level)');
-                layer.bindPopup(popupContent);
+                // Popup handling is managed by the central multi-layer popup system
             }
         }).addTo(layerGroups.ptal);
     } catch (error) {
@@ -1469,7 +1806,7 @@ function createSampleGrowthZones() {
             </table>
         `;
         
-        polygon.bindPopup(popupContent);
+        // Popup handling is managed by the central multi-layer popup system
         layerGroups.growthZones.addLayer(polygon);
     });
 }
@@ -1500,7 +1837,7 @@ function createSampleHousing() {
             </table>
         `;
         
-        circle.bindPopup(popupContent);
+        // Popup handling is managed by the central multi-layer popup system
         layerGroups.housing.addLayer(circle);
     });
 }
@@ -1535,7 +1872,7 @@ function createSamplePTAL() {
             </table>
         `;
         
-        circle.bindPopup(popupContent);
+        // Popup handling is managed by the central multi-layer popup system
         layerGroups.ptal.addLayer(circle);
     });
 }
@@ -1558,8 +1895,7 @@ async function loadRailStations() {
                 });
             },
             onEachFeature: function(feature, layer) {
-                const popupContent = createFullPopupContent(feature, 'railStations', 'Rail Station');
-                layer.bindPopup(popupContent);
+                // Popup handling is managed by the central multi-layer popup system
             }
         });
         layerGroups.railStations.addLayer(railStationsLayer);
@@ -1619,8 +1955,7 @@ async function loadPTALDataAsync() {
                     };
                 },
                 onEachFeature: function(feature, layer) {
-                    const popupContent = createFullPopupContent(feature, 'ptal', 'PTAL (Public Transport Accessibility Level)');
-                    layer.bindPopup(popupContent);
+                    // Popup handling is managed by the central multi-layer popup system
                 }
             });
             
@@ -1667,8 +2002,7 @@ async function loadBusLinesAsync() {
                     opacity: 1
                 },
                 onEachFeature: function(feature, layer) {
-                    const popupContent = createFullPopupContent(feature, 'busLines', 'Bus Route');
-                    layer.bindPopup(popupContent);
+                    // Popup handling is managed by the central multi-layer popup system
                 }
             });
             
@@ -1713,8 +2047,7 @@ async function loadBusStopsAsync() {
                     });
                 },
                 onEachFeature: function(feature, layer) {
-                    const popupContent = createFullPopupContent(feature, 'busStops', 'Bus Stop');
-                    layer.bindPopup(popupContent);
+                    // Popup handling is managed by the central multi-layer popup system
                 }
             });
             
@@ -1756,17 +2089,7 @@ async function loadBusInfrastructureAsync() {
                     opacity: 1
                 },
                 onEachFeature: function(feature, layer) {
-                    const props = feature.properties;
-                    layer.bindPopup(`
-                        <h4>Bus Route</h4>
-                        <table class="popup-table">
-                            <tr><th>Property</th><th>Value</th></tr>
-                            <tr><td>Route</td><td>${props.route || 'N/A'}</td></tr>
-                            <tr><td>Operator</td><td>${props.operator || 'N/A'}</td></tr>
-                            <tr><td>Mon AM</td><td>${props.MONAM || 'N/A'}</td></tr>
-                            <tr><td>Mon PM</td><td>${props.MONPM || 'N/A'}</td></tr>
-                        </table>
-                    `);
+                    // Popup handling is managed by the central multi-layer popup system
                 }
             });
             
@@ -1799,17 +2122,7 @@ async function loadBusInfrastructureAsync() {
                     });
                 },
                 onEachFeature: function(feature, layer) {
-                    const props = feature.properties;
-                    layer.bindPopup(`
-                        <h4>${props.CommonName || 'Bus Stop'}</h4>
-                        <table class="popup-table">
-                            <tr><th>Property</th><th>Value</th></tr>
-                            <tr><td>Stop Code</td><td>${props.ATCOCode || 'N/A'}</td></tr>
-                            <tr><td>Bearing</td><td>${props.Bearing || 'N/A'}</td></tr>
-                            <tr><td>Mon AM</td><td>${props.MONAM || 'N/A'}</td></tr>
-                            <tr><td>Mon PM</td><td>${props.MONPM || 'N/A'}</td></tr>
-                        </table>
-                    `);
+                    // Popup handling is managed by the central multi-layer popup system
                 }
             });
             
@@ -1849,8 +2162,7 @@ async function loadTCRSchemesData() {
                 });
             },
             onEachFeature: function(feature, layer) {
-                const popupContent = createFullPopupContent(feature, 'tcrSchemes', 'TCR Point Scheme');
-                layer.bindPopup(popupContent);
+                // Popup handling is managed by the central multi-layer popup system
             }
         });
         layerGroups.tcrSchemes.addLayer(tcrPointsLayer);
@@ -1868,8 +2180,7 @@ async function loadTCRSchemesData() {
                 dashArray: '2, 2'
             },
             onEachFeature: function(feature, layer) {
-                const popupContent = createFullPopupContent(feature, 'tcrSchemes', 'TCR Line Scheme');
-                layer.bindPopup(popupContent);
+                // Popup handling is managed by the central multi-layer popup system
             }
         });
         layerGroups.tcrSchemes.addLayer(tcrLinesLayer);
@@ -1888,8 +2199,7 @@ async function loadTCRSchemesData() {
                 dashArray: '2, 2'
             },
             onEachFeature: function(feature, layer) {
-                const popupContent = createFullPopupContent(feature, 'tcrSchemes', 'TCR Polygon Scheme');
-                layer.bindPopup(popupContent);
+                // Popup handling is managed by the central multi-layer popup system
             }
         });
         layerGroups.tcrSchemes.addLayer(tcrPolygonsLayer);

@@ -136,6 +136,30 @@ h4.legend-title {
     padding-left: 5px;
 }
 
+/* Drag and drop styling */
+.dragging {
+    opacity: 0.5 !important;
+    transform: rotate(2deg);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.2) !important;
+    transition: all 0.2s ease;
+}
+
+.drag-over {
+    border-top: 3px solid #007bff !important;
+    background-color: rgba(0, 123, 255, 0.1) !important;
+    transition: all 0.2s ease;
+}
+
+[draggable="true"] {
+    cursor: move;
+}
+
+[draggable="true"]:hover {
+    background-color: rgba(0, 123, 255, 0.05);
+    border-radius: 4px;
+    transition: background-color 0.2s ease;
+}
+
 /* Base map controls */
 .basemap-controls {
     margin-bottom: 15px;
