@@ -283,21 +283,20 @@ function showPopupAtIndex(index, latlng) {
         // Insert navigation controls at the beginning of the popup content
         const navigationHTML = `
             <div style="background: #f8f9fa; padding: 8px; margin-bottom: 10px; border-bottom: 1px solid #dee2e6; border-radius: 4px;">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
-                    <strong style="color: #495057; font-size: 12px;">${formatLayerName(groupName)}</strong>
-                    <div style="font-size: 11px; color: #6c757d;">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <div style="display: flex; gap: 5px; align-items: center;">
+                        <button onclick="previousPopup()" ${index === 0 ? 'disabled' : ''} 
+                                style="background: #007bff; color: white; border: none; padding: 4px 8px; border-radius: 3px; font-size: 14px; cursor: ${index === 0 ? 'not-allowed' : 'pointer'}; opacity: ${index === 0 ? '0.5' : '1'};">
+                            &lt;
+                        </button>
+                        <button onclick="nextPopup()" ${index === currentPopupLayers.length - 1 ? 'disabled' : ''} 
+                                style="background: #007bff; color: white; border: none; padding: 4px 8px; border-radius: 3px; font-size: 14px; cursor: ${index === currentPopupLayers.length - 1 ? 'not-allowed' : 'pointer'}; opacity: ${index === currentPopupLayers.length - 1 ? '0.5' : '1'};">
+                            &gt;
+                        </button>
+                    </div>
+                    <div style="font-size: 11px; color: #6c757d; font-weight: 500;">
                         ${index + 1} of ${currentPopupLayers.length}
                     </div>
-                </div>
-                <div style="display: flex; gap: 5px;">
-                    <button onclick="previousPopup()" ${index === 0 ? 'disabled' : ''} 
-                            style="background: #007bff; color: white; border: none; padding: 3px 8px; border-radius: 3px; font-size: 11px; cursor: ${index === 0 ? 'not-allowed' : 'pointer'};">
-                        ← Prev
-                    </button>
-                    <button onclick="nextPopup()" ${index === currentPopupLayers.length - 1 ? 'disabled' : ''} 
-                            style="background: #007bff; color: white; border: none; padding: 3px 8px; border-radius: 3px; font-size: 11px; cursor: ${index === currentPopupLayers.length - 1 ? 'not-allowed' : 'pointer'};">
-                        Next →
-                    </button>
                 </div>
             </div>
         `;
@@ -372,13 +371,37 @@ function highlightFeature(layer) {
     // Store reference to highlighted layer
     highlightedLayer = layer;
     
-    // Store original style
-    if (layer.options) {
+    // Store original style more comprehensively
+    if (layer instanceof L.CircleMarker || layer instanceof L.Marker) {
         originalStyle = {
-            color: layer.options.color,
+            color: layer.options.color || '#3388ff',
+            fillColor: layer.options.fillColor || '#3388ff',
+            weight: layer.options.weight || 3,
+            opacity: layer.options.opacity || 1,
+            fillOpacity: layer.options.fillOpacity || 0.2,
+            radius: layer.options.radius || 5
+        };
+    } else if (layer instanceof L.Polygon) {
+        originalStyle = {
+            color: layer.options.color || '#3388ff',
+            fillColor: layer.options.fillColor || '#3388ff',
+            weight: layer.options.weight || 3,
+            opacity: layer.options.opacity || 1,
+            fillOpacity: layer.options.fillOpacity || 0.2
+        };
+    } else if (layer instanceof L.Polyline) {
+        originalStyle = {
+            color: layer.options.color || '#3388ff',
+            weight: layer.options.weight || 3,
+            opacity: layer.options.opacity || 1
+        };
+    } else {
+        // Fallback for other layer types
+        originalStyle = {
+            color: layer.options.color || '#3388ff',
             fillColor: layer.options.fillColor,
-            weight: layer.options.weight,
-            opacity: layer.options.opacity,
+            weight: layer.options.weight || 3,
+            opacity: layer.options.opacity || 1,
             fillOpacity: layer.options.fillOpacity,
             radius: layer.options.radius
         };
@@ -388,27 +411,27 @@ function highlightFeature(layer) {
     if (layer instanceof L.CircleMarker || layer instanceof L.Marker) {
         // For point features
         layer.setStyle({
-            color: '#ffff00', // bright yellow
-            fillColor: '#ffff00',
-            weight: 3,
+            color: '#ff0000', // bright red for better visibility
+            fillColor: '#ff0000',
+            weight: 4,
             opacity: 1,
-            fillOpacity: 0.8,
-            radius: (layer.options.radius || 5) + 2
+            fillOpacity: 0.9,
+            radius: (originalStyle.radius || 5) + 3
         });
     } else if (layer instanceof L.Polygon) {
         // For polygon features
         layer.setStyle({
-            color: '#ffff00', // bright yellow
-            fillColor: '#ffff00',
-            weight: 3,
+            color: '#ff0000', // bright red
+            fillColor: '#ff0000',
+            weight: 4,
             opacity: 1,
-            fillOpacity: 0.3
+            fillOpacity: 0.4
         });
     } else if (layer instanceof L.Polyline) {
         // For line features
         layer.setStyle({
-            color: '#ffff00', // bright yellow
-            weight: 4,
+            color: '#ff0000', // bright red
+            weight: 5,
             opacity: 1
         });
     }
