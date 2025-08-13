@@ -535,32 +535,55 @@ function transformGeoJSON(geojson) {
     transformed.features.forEach(feature => {
         if (feature.geometry.type === 'Point') {
             const coords = feature.geometry.coordinates;
-            const transformedCoords = transformCoordinates(coords);
-            feature.geometry.coordinates = [transformedCoords[1], transformedCoords[0]]; // [lng, lat] for GeoJSON
+            // Check if coordinates are already in WGS84 (longitude, latitude)
+            if (coords[0] >= -180 && coords[0] <= 180 && coords[1] >= -90 && coords[1] <= 90) {
+                // Already in WGS84, keep as is [lng, lat]
+                feature.geometry.coordinates = coords;
+            } else {
+                // Transform from projected coordinates
+                const transformedCoords = transformCoordinates(coords);
+                feature.geometry.coordinates = [transformedCoords[1], transformedCoords[0]]; // [lng, lat] for GeoJSON
+            }
         } else if (feature.geometry.type === 'MultiLineString') {
             feature.geometry.coordinates = feature.geometry.coordinates.map(lineString =>
                 lineString.map(coord => {
-                    const transformed = transformCoordinates(coord);
-                    return [transformed[1], transformed[0]]; // [lng, lat] for GeoJSON
+                    if (coord[0] >= -180 && coord[0] <= 180 && coord[1] >= -90 && coord[1] <= 90) {
+                        return coord; // Already in WGS84
+                    } else {
+                        const transformed = transformCoordinates(coord);
+                        return [transformed[1], transformed[0]]; // [lng, lat] for GeoJSON
+                    }
                 })
             );
         } else if (feature.geometry.type === 'LineString') {
             feature.geometry.coordinates = feature.geometry.coordinates.map(coord => {
-                const transformed = transformCoordinates(coord);
-                return [transformed[1], transformed[0]]; // [lng, lat] for GeoJSON
+                if (coord[0] >= -180 && coord[0] <= 180 && coord[1] >= -90 && coord[1] <= 90) {
+                    return coord; // Already in WGS84
+                } else {
+                    const transformed = transformCoordinates(coord);
+                    return [transformed[1], transformed[0]]; // [lng, lat] for GeoJSON
+                }
             });
         } else if (feature.geometry.type === 'Polygon') {
             feature.geometry.coordinates = feature.geometry.coordinates.map(ring =>
                 ring.map(coord => {
-                    const transformed = transformCoordinates(coord);
-                    return [transformed[1], transformed[0]]; // [lng, lat] for GeoJSON
+                    if (coord[0] >= -180 && coord[0] <= 180 && coord[1] >= -90 && coord[1] <= 90) {
+                        return coord; // Already in WGS84
+                    } else {
+                        const transformed = transformCoordinates(coord);
+                        return [transformed[1], transformed[0]]; // [lng, lat] for GeoJSON
+                    }
                 })
             );
         } else if (feature.geometry.type === 'MultiPolygon') {
             feature.geometry.coordinates = feature.geometry.coordinates.map(polygon =>
                 polygon.map(ring => ring.map(coord => {
-                    const transformed = transformCoordinates(coord);
-                    return [transformed[1], transformed[0]]; // [lng, lat] for GeoJSON
+                    if (coord[0] >= -180 && coord[0] <= 180 && coord[1] >= -90 && coord[1] <= 90) {
+                        return coord; // Already in WGS84
+                    } else {
+                        const transformed = transformCoordinates(coord);
+                        return [transformed[1], transformed[0]]; // [lng, lat] for GeoJSON
+                    }
                 }))
             );
         }
