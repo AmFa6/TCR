@@ -91,6 +91,8 @@ function setupLegendControls() {
     
     // Setup styling modal
     setupStylingModal();
+    setupFilterModal();
+    setupLayerIcons();
 }
 
 function setupStylingModal() {
@@ -197,6 +199,265 @@ function updateColorScheme(scheme) {
     if (colorSchemes[scheme] && layerGroups.ptal) {
         // This would update the color scheme - implementation depends on specific requirements
         console.log('Color scheme updated to:', scheme);
+    }
+}
+
+function setupFilterModal() {
+    const filterModal = document.getElementById('filter-modal');
+    const filterCloseBtn = document.querySelector('.filter-close');
+    
+    // Close filter modal
+    filterCloseBtn.onclick = () => filterModal.style.display = 'none';
+    window.onclick = (event) => {
+        if (event.target === filterModal) {
+            filterModal.style.display = 'none';
+        }
+    };
+    
+    // Filter attribute change handler
+    const filterAttribute = document.getElementById('filter-attribute');
+    const filterControls = document.getElementById('filter-controls');
+    filterAttribute.addEventListener('change', (e) => {
+        filterControls.style.display = e.target.value ? 'block' : 'none';
+    });
+    
+    // Filter operator change handler
+    const filterOperator = document.getElementById('filter-operator');
+    const filterValue2Group = document.getElementById('filter-value2-group');
+    filterOperator.addEventListener('change', (e) => {
+        filterValue2Group.style.display = e.target.value === 'between' ? 'block' : 'none';
+    });
+    
+    // Filter buttons
+    document.getElementById('apply-filter').addEventListener('click', () => {
+        applyAttributeFilter();
+    });
+    
+    document.getElementById('clear-all-filters').addEventListener('click', () => {
+        clearAllFilters();
+        filterModal.style.display = 'none';
+    });
+    
+    document.getElementById('filter-visible-extent').addEventListener('click', () => {
+        filterToVisibleExtent();
+    });
+    
+    document.getElementById('clear-spatial-filter').addEventListener('click', () => {
+        clearSpatialFilter();
+    });
+}
+
+function setupLayerIcons() {
+    // Palette icon handlers
+    document.querySelectorAll('.palette-icon').forEach(icon => {
+        icon.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const layerName = e.target.getAttribute('data-layer');
+            openStylingModal(layerName);
+        });
+    });
+    
+    // Filter icon handlers
+    document.querySelectorAll('.filter-icon').forEach(icon => {
+        icon.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const layerName = e.target.getAttribute('data-layer');
+            openFilterModal(layerName);
+        });
+    });
+}
+
+function openStylingModal(layerName) {
+    const modal = document.getElementById('styling-modal');
+    const title = document.getElementById('modal-title');
+    
+    // Set modal title based on layer
+    const layerTitles = {
+        'growth-zones': 'Growth Zones Styling',
+        'housing': 'Housing Styling',
+        'ptal': 'PTAL Styling',
+        'tcr-schemes': 'TCR Schemes Styling',
+        'bus-lines': 'Bus Lines Styling',
+        'bus-stops': 'Bus Stops Styling',
+        'rail-stations': 'Rail Stations Styling'
+    };
+    
+    title.textContent = layerTitles[layerName] || 'Layer Styling';
+    modal.setAttribute('data-current-layer', layerName);
+    modal.style.display = 'block';
+}
+
+function openFilterModal(layerName) {
+    const filterModal = document.getElementById('filter-modal');
+    const filterTitle = document.getElementById('filter-modal-title');
+    const filterAttribute = document.getElementById('filter-attribute');
+    
+    // Set modal title based on layer
+    const layerTitles = {
+        'growth-zones': 'Growth Zones Filter',
+        'housing': 'Housing Filter',
+        'ptal': 'PTAL Filter',
+        'tcr-schemes': 'TCR Schemes Filter',
+        'bus-lines': 'Bus Lines Filter',
+        'bus-stops': 'Bus Stops Filter',
+        'rail-stations': 'Rail Stations Filter'
+    };
+    
+    filterTitle.textContent = layerTitles[layerName] || 'Layer Filter';
+    filterModal.setAttribute('data-current-layer', layerName);
+    
+    // Populate available attributes for the layer
+    populateFilterAttributes(layerName);
+    
+    filterModal.style.display = 'block';
+}
+
+function populateFilterAttributes(layerName) {
+    const filterAttribute = document.getElementById('filter-attribute');
+    filterAttribute.innerHTML = '<option value="">Select attribute...</option>';
+    
+    // Get layer group and extract attribute names
+    const camelCaseId = toCamelCase(layerName);
+    const layerGroup = layerGroups[camelCaseId];
+    
+    if (layerGroup) {
+        const attributes = new Set();
+        layerGroup.eachLayer(layer => {
+            if (layer.feature && layer.feature.properties) {
+                Object.keys(layer.feature.properties).forEach(key => {
+                    if (layer.feature.properties[key] !== null && layer.feature.properties[key] !== undefined) {
+                        attributes.add(key);
+                    }
+                });
+            }
+        });
+        
+        // Add attributes to dropdown
+        Array.from(attributes).sort().forEach(attr => {
+            const option = document.createElement('option');
+            option.value = attr;
+            option.textContent = attr;
+            filterAttribute.appendChild(option);
+        });
+    }
+}
+
+function applyAttributeFilter() {
+    const layerName = document.getElementById('filter-modal').getAttribute('data-current-layer');
+    const attribute = document.getElementById('filter-attribute').value;
+    const operator = document.getElementById('filter-operator').value;
+    const value1 = document.getElementById('filter-value').value;
+    const value2 = document.getElementById('filter-value2').value;
+    
+    if (!attribute || !value1) {
+        alert('Please select an attribute and enter a value');
+        return;
+    }
+    
+    const camelCaseId = toCamelCase(layerName);
+    const layerGroup = layerGroups[camelCaseId];
+    
+    if (layerGroup) {
+        layerGroup.eachLayer(layer => {
+            if (layer.feature && layer.feature.properties) {
+                const propValue = layer.feature.properties[attribute];
+                let showFeature = false;
+                
+                switch (operator) {
+                    case 'equals':
+                        showFeature = propValue == value1;
+                        break;
+                    case 'contains':
+                        showFeature = propValue && propValue.toString().toLowerCase().includes(value1.toLowerCase());
+                        break;
+                    case 'greater':
+                        showFeature = parseFloat(propValue) > parseFloat(value1);
+                        break;
+                    case 'less':
+                        showFeature = parseFloat(propValue) < parseFloat(value1);
+                        break;
+                    case 'between':
+                        const num = parseFloat(propValue);
+                        showFeature = num >= parseFloat(value1) && num <= parseFloat(value2);
+                        break;
+                }
+                
+                // Show/hide feature based on filter
+                if (showFeature) {
+                    if (layer.setStyle) {
+                        layer.setStyle({ opacity: layer.options.opacity || 1, fillOpacity: layer.options.fillOpacity || 0.7 });
+                    }
+                } else {
+                    if (layer.setStyle) {
+                        layer.setStyle({ opacity: 0, fillOpacity: 0 });
+                    }
+                }
+            }
+        });
+        
+        // Update active filters display
+        updateActiveFiltersDisplay(layerName, attribute, operator, value1, value2);
+    }
+}
+
+function clearAllFilters() {
+    // Reset all layer visibility
+    Object.values(layerGroups).forEach(layerGroup => {
+        layerGroup.eachLayer(layer => {
+            if (layer.setStyle) {
+                layer.setStyle({ opacity: layer.options.opacity || 1, fillOpacity: layer.options.fillOpacity || 0.7 });
+            }
+        });
+    });
+    
+    // Clear active filters display
+    document.getElementById('active-filters-list').innerHTML = '<p class="no-filters">No active filters</p>';
+}
+
+function filterToVisibleExtent() {
+    const bounds = map.getBounds();
+    // Implementation for spatial filtering would go here
+    console.log('Filter to visible extent:', bounds);
+}
+
+function clearSpatialFilter() {
+    // Implementation for clearing spatial filters would go here
+    console.log('Clear spatial filter');
+}
+
+function updateActiveFiltersDisplay(layerName, attribute, operator, value1, value2) {
+    const activeFiltersList = document.getElementById('active-filters-list');
+    const noFilters = activeFiltersList.querySelector('.no-filters');
+    if (noFilters) noFilters.remove();
+    
+    const filterText = `${layerName}: ${attribute} ${operator} ${value1}${value2 ? ` and ${value2}` : ''}`;
+    const filterDiv = document.createElement('div');
+    filterDiv.className = 'active-filter';
+    filterDiv.innerHTML = `
+        <span>${filterText}</span>
+        <button onclick="removeFilter(this, '${layerName}')">×</button>
+    `;
+    activeFiltersList.appendChild(filterDiv);
+}
+
+function removeFilter(button, layerName) {
+    button.parentElement.remove();
+    
+    // Reset layer visibility
+    const camelCaseId = toCamelCase(layerName);
+    const layerGroup = layerGroups[camelCaseId];
+    if (layerGroup) {
+        layerGroup.eachLayer(layer => {
+            if (layer.setStyle) {
+                layer.setStyle({ opacity: layer.options.opacity || 1, fillOpacity: layer.options.fillOpacity || 0.7 });
+            }
+        });
+    }
+    
+    // Check if no filters remain
+    const activeFiltersList = document.getElementById('active-filters-list');
+    if (activeFiltersList.children.length === 0) {
+        activeFiltersList.innerHTML = '<p class="no-filters">No active filters</p>';
     }
 }
 

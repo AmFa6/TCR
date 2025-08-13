@@ -518,3 +518,82 @@ h4.legend-title {
 #reset-styling:hover {
     background-color: #545b62;
 }
+
+/* Layer Control Icons */
+.layer-controls {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+}
+
+.layer-icon {
+    cursor: pointer;
+    font-size: 14px;
+    padding: 2px 4px;
+    border-radius: 3px;
+    transition: all 0.2s ease;
+    user-select: none;
+}
+
+.layer-icon:hover {
+    background-color: #f0f0f0;
+    transform: scale(1.1);
+}
+
+.palette-icon {
+    color: #ff6b35;
+}
+
+.palette-icon:hover {
+    background-color: #fff3f0;
+}
+
+.filter-icon {
+    color: #4a90e2;
+    font-size: 12px;
+}
+
+.filter-icon:hover {
+    background-color: #f0f7ff;
+}
+
+/* Active Filters Display */
+.active-filter {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background-color: #e7f3ff;
+    border: 1px solid #b3d9ff;
+    border-radius: 4px;
+    padding: 6px 8px;
+    margin-bottom: 5px;
+    font-size: 0.85em;
+}
+
+.active-filter span {
+    flex: 1;
+    color: #333;
+}
+
+.active-filter button {
+    background: none;
+    border: none;
+    color: #666;
+    cursor: pointer;
+    font-size: 16px;
+    font-weight: bold;
+    padding: 0 4px;
+    border-radius: 2px;
+}
+
+.active-filter button:hover {
+    background-color: #ff4444;
+    color: white;
+}
+
+.no-filters {
+    color: #999;
+    font-style: italic;
+    text-align: center;
+    margin: 10px 0;
+}

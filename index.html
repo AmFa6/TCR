@@ -24,43 +24,67 @@
         <div id="legend-content-wrapper">
             
             <!-- Individual layers without categories -->
-            <div style="display: flex; align-items: center; margin-bottom: 8px;">
-                <input type="checkbox" id="growth-zones" checked style="margin-right: 8px;">
-                <div style="width: 16px; height: 16px; background-color: transparent; border: 2px solid #000; margin-right: 8px;"></div>
-                <span>Growth Zones</span>
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+                <div style="display: flex; align-items: center;">
+                    <input type="checkbox" id="growth-zones" checked style="margin-right: 8px;">
+                    <div style="width: 16px; height: 16px; background-color: transparent; border: 2px solid #000; margin-right: 8px;"></div>
+                    <span>Growth Zones</span>
+                </div>
+                <div class="layer-controls">
+                    <span class="layer-icon palette-icon" data-layer="growth-zones" title="Style">🎨</span>
+                    <span class="layer-icon filter-icon" data-layer="growth-zones" title="Filter">⚫</span>
+                </div>
             </div>
-            <div style="display: flex; align-items: center; margin-bottom: 8px;">
-                <input type="checkbox" id="housing" checked style="margin-right: 8px;">
-                <div style="width: 16px; height: 16px; background-color: transparent; border: 1px solid #000; margin-right: 8px;"></div>
-                <span>Housing</span>
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+                <div style="display: flex; align-items: center;">
+                    <input type="checkbox" id="housing" checked style="margin-right: 8px;">
+                    <div style="width: 16px; height: 16px; background-color: transparent; border: 1px solid #000; margin-right: 8px;"></div>
+                    <span>Housing</span>
+                </div>
+                <div class="layer-controls">
+                    <span class="layer-icon palette-icon" data-layer="housing" title="Style">🎨</span>
+                    <span class="layer-icon filter-icon" data-layer="housing" title="Filter">⚫</span>
+                </div>
             </div>
             <!-- PTAL with graduated color scale -->
-            <div style="display: flex; align-items: center; margin-bottom: 8px;">
-                <input type="checkbox" id="ptal" checked style="margin-right: 8px;">
-                <div class="ptal-legend-container" style="margin-right: 8px;">
-                    <div class="graduated-legend" id="ptal-color-scale" style="cursor: pointer;" title="Click to customize styling">
-                        <div class="color-bar">
-                            <div class="color-segment" style="background-color: #08306b;"></div>
-                            <div class="color-segment" style="background-color: #2171b5;"></div>
-                            <div class="color-segment" style="background-color: #6baed6;"></div>
-                            <div class="color-segment" style="background-color: #31a354;"></div>
-                            <div class="color-segment" style="background-color: #fed976;"></div>
-                            <div class="color-segment" style="background-color: #fd8d3c;"></div>
-                            <div class="color-segment" style="background-color: #e31a1c;"></div>
-                            <div class="color-segment" style="background-color: #99000d;"></div>
-                        </div>
-                        <div class="legend-labels">
-                            <span class="legend-label-start">0/1a</span>
-                            <span class="legend-label-end">6b</span>
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+                <div style="display: flex; align-items: center;">
+                    <input type="checkbox" id="ptal" checked style="margin-right: 8px;">
+                    <div class="ptal-legend-container" style="margin-right: 8px;">
+                        <div class="graduated-legend" id="ptal-color-scale" style="cursor: pointer;" title="Click to customize styling">
+                            <div class="color-bar">
+                                <div class="color-segment" style="background-color: #08306b;"></div>
+                                <div class="color-segment" style="background-color: #2171b5;"></div>
+                                <div class="color-segment" style="background-color: #6baed6;"></div>
+                                <div class="color-segment" style="background-color: #31a354;"></div>
+                                <div class="color-segment" style="background-color: #fed976;"></div>
+                                <div class="color-segment" style="background-color: #fd8d3c;"></div>
+                                <div class="color-segment" style="background-color: #e31a1c;"></div>
+                                <div class="color-segment" style="background-color: #99000d;"></div>
+                            </div>
+                            <div class="legend-labels">
+                                <span class="legend-label-start">0/1a</span>
+                                <span class="legend-label-end">6b</span>
+                            </div>
                         </div>
                     </div>
+                    <span>PTAL (Transport Accessibility)</span>
                 </div>
-                <span>PTAL (Transport Accessibility)</span>
+                <div class="layer-controls">
+                    <span class="layer-icon palette-icon" data-layer="ptal" title="Style">🎨</span>
+                    <span class="layer-icon filter-icon" data-layer="ptal" title="Filter">⚫</span>
+                </div>
             </div>
-            <div style="display: flex; align-items: center; margin-bottom: 8px;">
-                <input type="checkbox" id="tcr-schemes" checked style="margin-right: 8px;">
-                <div style="width: 16px; height: 16px; background-color: transparent; border: 0.5px solid #ff00ff; margin-right: 8px;"></div>
-                <span>TCR Schemes</span>
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+                <div style="display: flex; align-items: center;">
+                    <input type="checkbox" id="tcr-schemes" checked style="margin-right: 8px;">
+                    <div style="width: 16px; height: 16px; background-color: transparent; border: 0.5px solid #ff00ff; margin-right: 8px;"></div>
+                    <span>TCR Schemes</span>
+                </div>
+                <div class="layer-controls">
+                    <span class="layer-icon palette-icon" data-layer="tcr-schemes" title="Style">🎨</span>
+                    <span class="layer-icon filter-icon" data-layer="tcr-schemes" title="Filter">⚫</span>
+                </div>
             </div>
             
             <!-- Transport Infrastructure as the only grouped category -->
@@ -69,20 +93,38 @@
                     <span>Transport Infrastructure</span>
                 </div>
                 <div class="legend-category-content">
-                    <div style="display: flex; align-items: center; margin-bottom: 8px;">
-                        <input type="checkbox" id="bus-lines" checked style="margin-right: 8px;">
-                        <div style="width: 20px; height: 3px; border-top: 2px solid #008000; margin-right: 8px;"></div>
-                        <span>Bus Lines</span>
+                    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+                        <div style="display: flex; align-items: center;">
+                            <input type="checkbox" id="bus-lines" checked style="margin-right: 8px;">
+                            <div style="width: 20px; height: 3px; border-top: 2px solid #008000; margin-right: 8px;"></div>
+                            <span>Bus Lines</span>
+                        </div>
+                        <div class="layer-controls">
+                            <span class="layer-icon palette-icon" data-layer="bus-lines" title="Style">🎨</span>
+                            <span class="layer-icon filter-icon" data-layer="bus-lines" title="Filter">⚫</span>
+                        </div>
                     </div>
-                    <div style="display: flex; align-items: center; margin-bottom: 8px;">
-                        <input type="checkbox" id="bus-stops" checked style="margin-right: 8px;">
-                        <div style="width: 8px; height: 8px; background-color: #008000; border-radius: 50%; margin-right: 8px; border: 1px solid #008000;"></div>
-                        <span>Bus Stops</span>
+                    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+                        <div style="display: flex; align-items: center;">
+                            <input type="checkbox" id="bus-stops" checked style="margin-right: 8px;">
+                            <div style="width: 8px; height: 8px; background-color: #008000; border-radius: 50%; margin-right: 8px; border: 1px solid #008000;"></div>
+                            <span>Bus Stops</span>
+                        </div>
+                        <div class="layer-controls">
+                            <span class="layer-icon palette-icon" data-layer="bus-stops" title="Style">🎨</span>
+                            <span class="layer-icon filter-icon" data-layer="bus-stops" title="Filter">⚫</span>
+                        </div>
                     </div>
-                    <div style="display: flex; align-items: center; margin-bottom: 8px;">
-                        <input type="checkbox" id="rail-stations" checked style="margin-right: 8px;">
-                        <div style="width: 10px; height: 10px; background-color: #8B4513; border-radius: 50%; margin-right: 8px; border: 2px solid #8B4513;"></div>
-                        <span>Rail Stations</span>
+                    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+                        <div style="display: flex; align-items: center;">
+                            <input type="checkbox" id="rail-stations" checked style="margin-right: 8px;">
+                            <div style="width: 10px; height: 10px; background-color: #8B4513; border-radius: 50%; margin-right: 8px; border: 2px solid #8B4513;"></div>
+                            <span>Rail Stations</span>
+                        </div>
+                        <div class="layer-controls">
+                            <span class="layer-icon palette-icon" data-layer="rail-stations" title="Style">🎨</span>
+                            <span class="layer-icon filter-icon" data-layer="rail-stations" title="Filter">⚫</span>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -157,6 +199,67 @@
                 <div class="modal-footer">
                     <button id="apply-styling">Apply Changes</button>
                     <button id="reset-styling">Reset to Default</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Filter Control Modal -->
+    <div id="filter-modal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="filter-modal-title">Layer Filter</h3>
+                <span class="close filter-close">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div class="styling-section">
+                    <h4>Attribute Filters</h4>
+                    <div class="control-group">
+                        <label for="filter-attribute">Filter by Attribute:</label>
+                        <select id="filter-attribute">
+                            <option value="">Select attribute...</option>
+                        </select>
+                    </div>
+                    <div id="filter-controls" style="display: none;">
+                        <div class="control-group">
+                            <label for="filter-operator">Operator:</label>
+                            <select id="filter-operator">
+                                <option value="equals">Equals</option>
+                                <option value="contains">Contains</option>
+                                <option value="greater">Greater than</option>
+                                <option value="less">Less than</option>
+                                <option value="between">Between</option>
+                            </select>
+                        </div>
+                        <div class="control-group">
+                            <label for="filter-value">Value:</label>
+                            <input type="text" id="filter-value" placeholder="Enter filter value">
+                        </div>
+                        <div class="control-group" id="filter-value2-group" style="display: none;">
+                            <label for="filter-value2">To:</label>
+                            <input type="text" id="filter-value2" placeholder="Enter second value">
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="styling-section">
+                    <h4>Spatial Filters</h4>
+                    <div class="control-group">
+                        <button id="filter-visible-extent">Filter to Visible Extent</button>
+                        <button id="clear-spatial-filter">Clear Spatial Filter</button>
+                    </div>
+                </div>
+                
+                <div class="styling-section">
+                    <h4>Active Filters</h4>
+                    <div id="active-filters-list">
+                        <p class="no-filters">No active filters</p>
+                    </div>
+                </div>
+                
+                <div class="modal-footer">
+                    <button id="apply-filter">Apply Filter</button>
+                    <button id="clear-all-filters">Clear All Filters</button>
                 </div>
             </div>
         </div>
