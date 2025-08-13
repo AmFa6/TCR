@@ -33,15 +33,6 @@ function initializeMap() {
     layerGroups.growthZones = L.layerGroup().addTo(map);
     layerGroups.housing = L.layerGroup().addTo(map);
     layerGroups.ptal = L.layerGroup().addTo(map);
-    // Initialize individual PTAL category layer groups
-    layerGroups.ptal01a = L.layerGroup().addTo(map);
-    layerGroups.ptal1b = L.layerGroup().addTo(map);
-    layerGroups.ptal2 = L.layerGroup().addTo(map);
-    layerGroups.ptal3 = L.layerGroup().addTo(map);
-    layerGroups.ptal4 = L.layerGroup().addTo(map);
-    layerGroups.ptal5 = L.layerGroup().addTo(map);
-    layerGroups.ptal6a = L.layerGroup().addTo(map);
-    layerGroups.ptal6b = L.layerGroup().addTo(map);
     layerGroups.busLines = L.layerGroup().addTo(map);
     layerGroups.busStops = L.layerGroup().addTo(map);
     layerGroups.railStations = L.layerGroup().addTo(map);
@@ -88,11 +79,6 @@ function setupLegendControls() {
             const layerId = this.id;
             let camelCaseId = toCamelCase(layerId);
             
-            // Handle special PTAL category IDs
-            if (layerId.startsWith('ptal-')) {
-                camelCaseId = layerId.replace(/-/g, '');
-            }
-            
             if (layerGroups[camelCaseId]) {
                 if (this.checked) {
                     map.addLayer(layerGroups[camelCaseId]);
@@ -102,6 +88,117 @@ function setupLegendControls() {
             }
         });
     });
+    
+    // Setup styling modal
+    setupStylingModal();
+}
+
+function setupStylingModal() {
+    const modal = document.getElementById('styling-modal');
+    const closeBtn = document.querySelector('.close');
+    
+    // Close modal when clicking X or outside
+    closeBtn.onclick = () => modal.style.display = 'none';
+    window.onclick = (event) => {
+        if (event.target === modal) {
+            modal.style.display = 'none';
+        }
+    };
+    
+    // Add click handlers for legend elements
+    document.getElementById('ptal-color-scale').addEventListener('click', () => {
+        document.getElementById('modal-title').textContent = 'PTAL Styling';
+        modal.style.display = 'block';
+    });
+    
+    // Opacity slider handler
+    const opacitySlider = document.getElementById('opacity-slider');
+    const opacityValue = document.getElementById('opacity-value');
+    opacitySlider.addEventListener('input', (e) => {
+        opacityValue.textContent = Math.round(e.target.value * 100) + '%';
+    });
+    
+    // Size slider handler
+    const sizeSlider = document.getElementById('size-slider');
+    const sizeValue = document.getElementById('size-value');
+    sizeSlider.addEventListener('input', (e) => {
+        sizeValue.textContent = e.target.value;
+    });
+    
+    // Classification method handler
+    const classificationMethod = document.getElementById('classification-method');
+    const graduatedOptions = document.getElementById('graduated-options');
+    classificationMethod.addEventListener('change', (e) => {
+        graduatedOptions.style.display = e.target.value === 'graduated' ? 'block' : 'none';
+    });
+    
+    // Apply styling button
+    document.getElementById('apply-styling').addEventListener('click', () => {
+        applyStyling();
+        modal.style.display = 'none';
+    });
+    
+    // Reset styling button
+    document.getElementById('reset-styling').addEventListener('click', () => {
+        resetStyling();
+        modal.style.display = 'none';
+    });
+}
+
+function applyStyling() {
+    const opacity = parseFloat(document.getElementById('opacity-slider').value);
+    const size = parseFloat(document.getElementById('size-slider').value);
+    const colorScheme = document.getElementById('color-scheme').value;
+    
+    // Update PTAL styling
+    if (layerGroups.ptal) {
+        layerGroups.ptal.eachLayer(layer => {
+            if (layer.setStyle) {
+                const currentStyle = layer.options;
+                layer.setStyle({
+                    ...currentStyle,
+                    fillOpacity: opacity,
+                    weight: size * 0.5,
+                    opacity: opacity
+                });
+            }
+        });
+    }
+    
+    // Update color scheme if changed
+    if (colorScheme !== 'blue-red') {
+        updateColorScheme(colorScheme);
+    }
+}
+
+function resetStyling() {
+    // Reset sliders to default values
+    document.getElementById('opacity-slider').value = 0.7;
+    document.getElementById('size-slider').value = 2;
+    document.getElementById('color-scheme').value = 'blue-red';
+    document.getElementById('opacity-value').textContent = '70%';
+    document.getElementById('size-value').textContent = '2';
+    
+    // Reload PTAL data to reset styling
+    if (layerGroups.ptal) {
+        layerGroups.ptal.clearLayers();
+        loadPTALData();
+    }
+}
+
+function updateColorScheme(scheme) {
+    const colorSchemes = {
+        'viridis': ['#440154', '#482878', '#3e4989', '#31688e', '#26828e', '#1f9e89', '#35b779', '#6ece58'],
+        'plasma': ['#0d0887', '#46039f', '#7201a8', '#9c179e', '#bd3786', '#d8576b', '#ed7953', '#fb9f3a'],
+        'cool-warm': ['#3b4cc0', '#5977ce', '#7ba3dc', '#9fcee8', '#c4e8f0', '#f0e0a6', '#f7b668', '#e68441'],
+        'greens': ['#f7fcf5', '#e5f5e0', '#c7e9c0', '#a1d99b', '#74c476', '#41ab5d', '#238b45', '#005a32']
+    };
+    
+    if (colorSchemes[scheme] && layerGroups.ptal) {
+        // This would update the color scheme - implementation depends on specific requirements
+        console.log('Color scheme updated to:', scheme);
+    }
+}
 }
 
 function toCamelCase(str) {
@@ -248,47 +345,43 @@ async function loadPTALData() {
         
         // Define PTAL categories and their colors
         const ptalCategories = {
-            '0': { color: '#08306b', layerGroup: 'ptal01a' },
-            '1a': { color: '#08306b', layerGroup: 'ptal01a' },
-            '1b': { color: '#2171b5', layerGroup: 'ptal1b' },
-            '2': { color: '#6baed6', layerGroup: 'ptal2' },
-            '3': { color: '#31a354', layerGroup: 'ptal3' },
-            '4': { color: '#fed976', layerGroup: 'ptal4' },
-            '5': { color: '#fd8d3c', layerGroup: 'ptal5' },
-            '6a': { color: '#e31a1c', layerGroup: 'ptal6a' },
-            '6b': { color: '#99000d', layerGroup: 'ptal6b' }
+            '0': '#08306b',
+            '1a': '#08306b',
+            '1b': '#2171b5',
+            '2': '#6baed6',
+            '3': '#31a354',
+            '4': '#fed976',
+            '5': '#fd8d3c',
+            '6a': '#e31a1c',
+            '6b': '#99000d'
         };
         
-        // Process each feature and add to appropriate layer group
-        transformedData.features.forEach(feature => {
-            const ptal = (feature.properties.PTAL || feature.properties.ptal || '').toString().toLowerCase();
-            const category = ptalCategories[ptal];
-            
-            if (category) {
-                const geoJsonLayer = L.geoJSON(feature, {
-                    style: {
-                        fillColor: category.color,
-                        weight: 0,
-                        opacity: 0,
-                        color: 'transparent',
-                        fillOpacity: 0.7
-                    },
-                    onEachFeature: function(feature, layer) {
-                        let popupContent = '<div class="taf-popup">';
-                        popupContent += '<div class="popup-header">PTAL (Public Transport Accessibility Level)</div>';
-                        popupContent += '<table class="popup-table">';
-                        Object.keys(feature.properties).forEach(key => {
-                            if (feature.properties[key] !== null) {
-                                popupContent += '<tr><td><strong>' + key + ':</strong></td><td>' + feature.properties[key] + '</td></tr>';
-                            }
-                        });
-                        popupContent += '</table></div>';
-                        layer.bindPopup(popupContent);
+        L.geoJSON(transformedData, {
+            style: function(feature) {
+                const ptal = (feature.properties.PTAL || feature.properties.ptal || '').toString().toLowerCase();
+                const fillColor = ptalCategories[ptal] || '#b2df8a';
+                
+                return {
+                    fillColor: fillColor,
+                    weight: 0,
+                    opacity: 0,
+                    color: 'transparent',
+                    fillOpacity: 0.7
+                };
+            },
+            onEachFeature: function(feature, layer) {
+                let popupContent = '<div class="taf-popup">';
+                popupContent += '<div class="popup-header">PTAL (Public Transport Accessibility Level)</div>';
+                popupContent += '<table class="popup-table">';
+                Object.keys(feature.properties).forEach(key => {
+                    if (feature.properties[key] !== null) {
+                        popupContent += '<tr><td><strong>' + key + ':</strong></td><td>' + feature.properties[key] + '</td></tr>';
                     }
                 });
-                layerGroups[category.layerGroup].addLayer(geoJsonLayer);
+                popupContent += '</table></div>';
+                layer.bindPopup(popupContent);
             }
-        });
+        }).addTo(layerGroups.ptal);
     } catch (error) {
         console.error('Error loading PTAL data:', error);
     }

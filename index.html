@@ -34,53 +34,28 @@
                 <div style="width: 16px; height: 16px; background-color: transparent; border: 1px solid #000; margin-right: 8px;"></div>
                 <span>Housing</span>
             </div>
-            <!-- PTAL as grouped category -->
-            <div class="legend-category">
-                <div class="legend-category-header">
-                    <span>PTAL (Transport Accessibility)</span>
-                </div>
-                <div class="legend-category-content">
-                    <div style="display: flex; align-items: center; margin-bottom: 4px;">
-                        <input type="checkbox" id="ptal-0-1a" checked style="margin-right: 8px;">
-                        <div style="width: 16px; height: 12px; background-color: #08306b; margin-right: 8px;"></div>
-                        <span>PTAL 0/1a (Very Poor)</span>
-                    </div>
-                    <div style="display: flex; align-items: center; margin-bottom: 4px;">
-                        <input type="checkbox" id="ptal-1b" checked style="margin-right: 8px;">
-                        <div style="width: 16px; height: 12px; background-color: #2171b5; margin-right: 8px;"></div>
-                        <span>PTAL 1b (Poor)</span>
-                    </div>
-                    <div style="display: flex; align-items: center; margin-bottom: 4px;">
-                        <input type="checkbox" id="ptal-2" checked style="margin-right: 8px;">
-                        <div style="width: 16px; height: 12px; background-color: #6baed6; margin-right: 8px;"></div>
-                        <span>PTAL 2 (Poor to Moderate)</span>
-                    </div>
-                    <div style="display: flex; align-items: center; margin-bottom: 4px;">
-                        <input type="checkbox" id="ptal-3" checked style="margin-right: 8px;">
-                        <div style="width: 16px; height: 12px; background-color: #31a354; margin-right: 8px;"></div>
-                        <span>PTAL 3 (Moderate)</span>
-                    </div>
-                    <div style="display: flex; align-items: center; margin-bottom: 4px;">
-                        <input type="checkbox" id="ptal-4" checked style="margin-right: 8px;">
-                        <div style="width: 16px; height: 12px; background-color: #fed976; margin-right: 8px;"></div>
-                        <span>PTAL 4 (Good)</span>
-                    </div>
-                    <div style="display: flex; align-items: center; margin-bottom: 4px;">
-                        <input type="checkbox" id="ptal-5" checked style="margin-right: 8px;">
-                        <div style="width: 16px; height: 12px; background-color: #fd8d3c; margin-right: 8px;"></div>
-                        <span>PTAL 5 (Very Good)</span>
-                    </div>
-                    <div style="display: flex; align-items: center; margin-bottom: 4px;">
-                        <input type="checkbox" id="ptal-6a" checked style="margin-right: 8px;">
-                        <div style="width: 16px; height: 12px; background-color: #e31a1c; margin-right: 8px;"></div>
-                        <span>PTAL 6a (Excellent)</span>
-                    </div>
-                    <div style="display: flex; align-items: center; margin-bottom: 4px;">
-                        <input type="checkbox" id="ptal-6b" checked style="margin-right: 8px;">
-                        <div style="width: 16px; height: 12px; background-color: #99000d; margin-right: 8px;"></div>
-                        <span>PTAL 6b (Outstanding)</span>
+            <!-- PTAL with graduated color scale -->
+            <div style="display: flex; align-items: center; margin-bottom: 8px;">
+                <input type="checkbox" id="ptal" checked style="margin-right: 8px;">
+                <div class="ptal-legend-container" style="margin-right: 8px;">
+                    <div class="graduated-legend" id="ptal-color-scale" style="cursor: pointer;" title="Click to customize styling">
+                        <div class="color-bar">
+                            <div class="color-segment" style="background-color: #08306b;"></div>
+                            <div class="color-segment" style="background-color: #2171b5;"></div>
+                            <div class="color-segment" style="background-color: #6baed6;"></div>
+                            <div class="color-segment" style="background-color: #31a354;"></div>
+                            <div class="color-segment" style="background-color: #fed976;"></div>
+                            <div class="color-segment" style="background-color: #fd8d3c;"></div>
+                            <div class="color-segment" style="background-color: #e31a1c;"></div>
+                            <div class="color-segment" style="background-color: #99000d;"></div>
+                        </div>
+                        <div class="legend-labels">
+                            <span class="legend-label-start">0/1a</span>
+                            <span class="legend-label-end">6b</span>
+                        </div>
                     </div>
                 </div>
+                <span>PTAL (Transport Accessibility)</span>
             </div>
             <div style="display: flex; align-items: center; margin-bottom: 8px;">
                 <input type="checkbox" id="tcr-schemes" checked style="margin-right: 8px;">
@@ -112,6 +87,78 @@
                 </div>
             </div>
             
+        </div>
+    </div>
+    
+    <!-- Styling Control Modal -->
+    <div id="styling-modal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="modal-title">Layer Styling</h3>
+                <span class="close">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div class="styling-section">
+                    <h4>Display Options</h4>
+                    <div class="control-group">
+                        <label for="opacity-slider">Opacity:</label>
+                        <input type="range" id="opacity-slider" min="0" max="1" step="0.1" value="0.7">
+                        <span id="opacity-value">70%</span>
+                    </div>
+                    <div class="control-group">
+                        <label for="size-slider">Size/Weight:</label>
+                        <input type="range" id="size-slider" min="0.5" max="5" step="0.5" value="2">
+                        <span id="size-value">2</span>
+                    </div>
+                </div>
+                
+                <div class="styling-section">
+                    <h4>Color Scheme</h4>
+                    <div class="control-group">
+                        <label for="color-scheme">Predefined Schemes:</label>
+                        <select id="color-scheme">
+                            <option value="blue-red">Blue to Red (Default)</option>
+                            <option value="viridis">Viridis</option>
+                            <option value="plasma">Plasma</option>
+                            <option value="cool-warm">Cool to Warm</option>
+                            <option value="greens">Greens</option>
+                        </select>
+                    </div>
+                    <div class="control-group">
+                        <label for="custom-color">Custom Single Color:</label>
+                        <input type="color" id="custom-color" value="#3388ff">
+                        <button id="apply-custom-color">Apply Single Color</button>
+                    </div>
+                </div>
+                
+                <div class="styling-section">
+                    <h4>Classification</h4>
+                    <div class="control-group">
+                        <label for="classification-method">Method:</label>
+                        <select id="classification-method">
+                            <option value="categories">Categories (Current)</option>
+                            <option value="graduated">Graduated by Attribute</option>
+                        </select>
+                    </div>
+                    <div id="graduated-options" style="display: none;">
+                        <div class="control-group">
+                            <label for="classification-attribute">Attribute:</label>
+                            <select id="classification-attribute">
+                                <option value="PTAL">PTAL Level</option>
+                            </select>
+                        </div>
+                        <div class="control-group">
+                            <label for="class-count">Number of Classes:</label>
+                            <input type="number" id="class-count" min="3" max="10" value="8">
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="modal-footer">
+                    <button id="apply-styling">Apply Changes</button>
+                    <button id="reset-styling">Reset to Default</button>
+                </div>
+            </div>
         </div>
     </div>
     
