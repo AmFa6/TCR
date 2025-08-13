@@ -1,6 +1,7 @@
 // Initialize the map with TAF-style design
 let map;
 let layerGroups = {};
+let activeFilters = {}; // Store active filters per layer
 
 // Initialize map when page loads
 document.addEventListener('DOMContentLoaded', async function() {
@@ -235,12 +236,13 @@ function showPopupAtIndex(index, latlng) {
     const feature = layerInfo.feature;
     const groupName = layerInfo.groupName;
     
-    // Build popup content using TAF style
-    let popupContent = '<div class="taf-popup">';
+    // Use the standardized popup content creation function
+    let popupContent = createFullPopupContent(feature, groupName);
     
     // Add navigation header if multiple layers
     if (currentPopupLayers.length > 1) {
-        popupContent += `
+        // Insert navigation controls at the beginning of the popup content
+        const navigationHTML = `
             <div style="background: #f8f9fa; padding: 8px; margin-bottom: 10px; border-bottom: 1px solid #dee2e6; border-radius: 4px;">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
                     <strong style="color: #495057; font-size: 12px;">${formatLayerName(groupName)}</strong>
@@ -260,22 +262,10 @@ function showPopupAtIndex(index, latlng) {
                 </div>
             </div>
         `;
+        
+        // Insert navigation before the popup header
+        popupContent = popupContent.replace('<div class="popup-header">', navigationHTML + '<div class="popup-header">');
     }
-    
-    // Add popup header in TAF style
-    popupContent += `<div class="popup-header">${formatLayerName(groupName)}</div>`;
-    
-    // Add feature properties in TAF table style
-    popupContent += '<table class="popup-table">';
-    if (feature.properties) {
-        Object.keys(feature.properties).forEach(key => {
-            const value = feature.properties[key];
-            if (value !== null && value !== undefined && value !== '') {
-                popupContent += `<tr><td><strong>${formatPropertyName(key)}:</strong></td><td>${formatPropertyValue(value)}</td></tr>`;
-            }
-        });
-    }
-    popupContent += '</table></div>';
     
     // Create and show popup
     activePopup = L.popup({
@@ -952,71 +942,113 @@ function applyAttributeFilter() {
     const layerGroup = layerGroups[camelCaseId];
     
     if (layerGroup) {
-        // Function to recursively apply filter to all layers including nested ones
-        function applyFilterToLayer(currentLayer) {
-            if (currentLayer.getLayers) {
-                // This is a layer group, apply filter to all sub-layers
-                currentLayer.getLayers().forEach(subLayer => applyFilterToLayer(subLayer));
-            } else if (currentLayer.feature && currentLayer.feature.properties) {
-                // This is a feature layer
-                const propValue = currentLayer.feature.properties[attribute];
-                let showFeature = false;
-                
-                switch (operator) {
-                    case 'equals':
-                        showFeature = propValue == value1;
-                        break;
-                    case 'contains':
-                        showFeature = propValue && propValue.toString().toLowerCase().includes(value1.toLowerCase());
-                        break;
-                    case 'greater':
-                        showFeature = parseFloat(propValue) > parseFloat(value1);
-                        break;
-                    case 'less':
-                        showFeature = parseFloat(propValue) < parseFloat(value1);
-                        break;
-                    case 'between':
-                        const num = parseFloat(propValue);
-                        showFeature = num >= parseFloat(value1) && num <= parseFloat(value2);
-                        break;
-                }
-                
-                // Show/hide feature based on filter
-                if (showFeature) {
-                    if (currentLayer.setStyle) {
-                        currentLayer.setStyle({ opacity: currentLayer.options.opacity || 1, fillOpacity: currentLayer.options.fillOpacity || 0.7 });
-                    }
-                } else {
-                    if (currentLayer.setStyle) {
-                        currentLayer.setStyle({ opacity: 0, fillOpacity: 0 });
-                    }
-                }
-            }
+        // Store the filter for this specific layer
+        if (!activeFilters[layerName]) {
+            activeFilters[layerName] = [];
         }
         
-        // Apply filter to all layers including those loaded in chunks
-        applyFilterToLayer(layerGroup);
+        // Remove existing filter for the same attribute to avoid conflicts
+        activeFilters[layerName] = activeFilters[layerName].filter(f => f.attribute !== attribute);
+        
+        // Add new filter
+        activeFilters[layerName].push({
+            attribute: attribute,
+            operator: operator,
+            value1: value1,
+            value2: value2
+        });
+        
+        // Apply all filters for this layer
+        applyLayerFilters(layerName);
         
         // Update active filters display
-        updateActiveFiltersDisplay(layerName, attribute, operator, value1, value2);
+        updateActiveFiltersDisplay();
+        
+        // Close modal
+        filterModal.style.display = 'none';
     }
 }
 
+function applyLayerFilters(layerName) {
+    const camelCaseId = toCamelCase(layerName);
+    const layerGroup = layerGroups[camelCaseId];
+    const layerFilters = activeFilters[layerName] || [];
+    
+    if (!layerGroup) return;
+    
+    // Function to recursively apply all filters to layers
+    function applyFiltersToLayer(currentLayer) {
+        if (currentLayer.getLayers) {
+            // This is a layer group, apply filters to all sub-layers
+            currentLayer.getLayers().forEach(subLayer => applyFiltersToLayer(subLayer));
+        } else if (currentLayer.feature && currentLayer.feature.properties) {
+            // This is a feature layer
+            let showFeature = true;
+            
+            // Check against all active filters for this layer
+            for (const filter of layerFilters) {
+                const propValue = currentLayer.feature.properties[filter.attribute];
+                let passesFilter = false;
+                
+                switch (filter.operator) {
+                    case 'equals':
+                        passesFilter = propValue == filter.value1;
+                        break;
+                    case 'contains':
+                        passesFilter = propValue && propValue.toString().toLowerCase().includes(filter.value1.toLowerCase());
+                        break;
+                    case 'greater':
+                        passesFilter = parseFloat(propValue) > parseFloat(filter.value1);
+                        break;
+                    case 'less':
+                        passesFilter = parseFloat(propValue) < parseFloat(filter.value1);
+                        break;
+                    case 'between':
+                        const num = parseFloat(propValue);
+                        passesFilter = num >= parseFloat(filter.value1) && num <= parseFloat(filter.value2);
+                        break;
+                }
+                
+                // If any filter fails, hide the feature
+                if (!passesFilter) {
+                    showFeature = false;
+                    break;
+                }
+            }
+            
+            // Show/hide feature based on all filters
+            if (currentLayer.setStyle) {
+                if (showFeature) {
+                    currentLayer.setStyle({ opacity: currentLayer.options.opacity || 1, fillOpacity: currentLayer.options.fillOpacity || 0.7 });
+                } else {
+                    currentLayer.setStyle({ opacity: 0, fillOpacity: 0 });
+                }
+            }
+        }
+    }
+    
+    // Apply all filters for this layer
+    applyFiltersToLayer(layerGroup);
+}
+
 function clearAllFilters() {
+    // Clear all stored filters
+    activeFilters = {};
+    
     // Reset all layer visibility
     Object.values(layerGroups).forEach(layerGroup => {
-        layerGroup.eachLayer(layer => {
-            if (layer.setStyle) {
-                layer.setStyle({ opacity: layer.options.opacity || 1, fillOpacity: layer.options.fillOpacity || 0.7 });
+        function resetLayerVisibility(currentLayer) {
+            if (currentLayer.getLayers) {
+                currentLayer.getLayers().forEach(subLayer => resetLayerVisibility(subLayer));
+            } else if (currentLayer.setStyle) {
+                currentLayer.setStyle({ opacity: currentLayer.options.opacity || 1, fillOpacity: currentLayer.options.fillOpacity || 0.7 });
             }
-        });
+        }
+        layerGroup.eachLayer(resetLayerVisibility);
     });
     
     // Clear active filters display
-    const activeFiltersList = document.getElementById('active-filters-list');
-    if (activeFiltersList) {
-        activeFiltersList.innerHTML = '<p class="no-filters">No active filters</p>';
-    }
+    updateActiveFiltersDisplay();
 }
 
 function filterToVisibleExtent() {
@@ -1030,44 +1062,108 @@ function clearSpatialFilter() {
     console.log('Clear spatial filter');
 }
 
-function updateActiveFiltersDisplay(layerName, attribute, operator, value1, value2) {
+function updateActiveFiltersDisplay() {
     const activeFiltersList = document.getElementById('active-filters-list');
     if (!activeFiltersList) {
         console.warn('Active filters list element not found');
         return;
     }
     
-    const noFilters = activeFiltersList.querySelector('.no-filters');
-    if (noFilters) noFilters.remove();
+    // Clear existing display
+    activeFiltersList.innerHTML = '';
     
-    const filterText = `${layerName}: ${attribute} ${operator} ${value1}${value2 ? ` and ${value2}` : ''}`;
-    const filterDiv = document.createElement('div');
-    filterDiv.className = 'active-filter';
-    filterDiv.innerHTML = `
-        <span>${filterText}</span>
-        <button onclick="removeFilter(this, '${layerName}')">×</button>
-    `;
-    activeFiltersList.appendChild(filterDiv);
+    let hasFilters = false;
+    
+    // Display filters for each layer
+    Object.keys(activeFilters).forEach(layerName => {
+        const layerFilters = activeFilters[layerName];
+        if (layerFilters && layerFilters.length > 0) {
+            hasFilters = true;
+            
+            // Create layer header
+            const layerHeader = document.createElement('div');
+            layerHeader.className = 'filter-layer-header';
+            layerHeader.innerHTML = `
+                <strong>${formatLayerName(toCamelCase(layerName))}</strong>
+                <button class="clear-layer-filters" onclick="clearLayerFilters('${layerName}')" title="Clear all filters for this layer">Clear All</button>
+            `;
+            layerHeader.style.cssText = `
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                padding: 5px 0;
+                border-bottom: 1px solid #ddd;
+                margin-bottom: 5px;
+            `;
+            activeFiltersList.appendChild(layerHeader);
+            
+            // Add individual filters
+            layerFilters.forEach((filter, index) => {
+                const filterText = `${filter.attribute} ${filter.operator} ${filter.value1}${filter.value2 ? ` and ${filter.value2}` : ''}`;
+                const filterDiv = document.createElement('div');
+                filterDiv.className = 'active-filter';
+                filterDiv.innerHTML = `
+                    <span>${filterText}</span>
+                    <button onclick="removeLayerFilter('${layerName}', ${index})">×</button>
+                `;
+                filterDiv.style.marginLeft = '10px';
+                activeFiltersList.appendChild(filterDiv);
+            });
+        }
+    });
+    
+    if (!hasFilters) {
+        activeFiltersList.innerHTML = '<p class="no-filters">No active filters</p>';
+    }
 }
 
-function removeFilter(button, layerName) {
-    button.parentElement.remove();
-    
-    // Reset layer visibility
-    const camelCaseId = toCamelCase(layerName);
-    const layerGroup = layerGroups[camelCaseId];
-    if (layerGroup) {
-        layerGroup.eachLayer(layer => {
-            if (layer.setStyle) {
-                layer.setStyle({ opacity: layer.options.opacity || 1, fillOpacity: layer.options.fillOpacity || 0.7 });
+// Global functions for filter management
+window.clearLayerFilters = function(layerName) {
+    if (activeFilters[layerName]) {
+        delete activeFilters[layerName];
+        
+        // Reset layer visibility
+        const camelCaseId = toCamelCase(layerName);
+        const layerGroup = layerGroups[camelCaseId];
+        if (layerGroup) {
+            function resetLayerVisibility(currentLayer) {
+                if (currentLayer.getLayers) {
+                    currentLayer.getLayers().forEach(subLayer => resetLayerVisibility(subLayer));
+                } else if (currentLayer.setStyle) {
+                    currentLayer.setStyle({ opacity: currentLayer.options.opacity || 1, fillOpacity: currentLayer.options.fillOpacity || 0.7 });
+                }
             }
-        });
+            layerGroup.eachLayer(resetLayerVisibility);
+        }
+        
+        // Update display
+        updateActiveFiltersDisplay();
     }
-    
-    // Check if no filters remain
-    const activeFiltersList = document.getElementById('active-filters-list');
-    if (activeFiltersList && activeFiltersList.children.length === 0) {
-        activeFiltersList.innerHTML = '<p class="no-filters">No active filters</p>';
+};
+
+window.removeLayerFilter = function(layerName, filterIndex) {
+    if (activeFilters[layerName] && activeFilters[layerName][filterIndex]) {
+        // Remove the specific filter
+        activeFilters[layerName].splice(filterIndex, 1);
+        
+        // If no filters remain for this layer, remove the layer entry
+        if (activeFilters[layerName].length === 0) {
+            delete activeFilters[layerName];
+        }
+        
+        // Reapply remaining filters for this layer
+        applyLayerFilters(layerName);
+        
+        // Update display
+        updateActiveFiltersDisplay();
+    }
+};
+
+function removeFilter(button, layerName) {
+    // Legacy function - redirect to new system
+    // This maintains compatibility with any existing calls
+    if (activeFilters[layerName]) {
+        clearLayerFilters(layerName);
     }
 }
 
@@ -1075,6 +1171,79 @@ function toCamelCase(str) {
     return str.replace(/-([a-z])/g, function(match, letter) {
         return letter.toUpperCase();
     }).replace(/^-/, '');
+}
+
+// Function to rename TCR Schemes attributes
+function renameTCRAttributes(properties) {
+    const attributeMap = {
+        'Id': 'Id',
+        'MODE': null, // Remove this attribute
+        'JLTP5_info': null, // Remove "Mappable" as requested
+        'JLTP5_in_1': 'Assumptions',
+        'JLTP5_in_2': 'Further info required for mapping',
+        'JLTP5_in_3': 'Lead Organisation',
+        'JLTP5_in_4': 'Partner Organisations',
+        'JLTP5_in_5': 'Action',
+        'JLTP5_in_6': 'Mode',
+        'JLTP5_in_7': 'Type',
+        'JLTP5_in_8': 'Source',
+        'JLTP5_in_9': 'Delivery Scale',
+        'JLTP5_in_10': 'Cost',
+        'JLTP5_in_11': 'Funding already secured',
+        'JLTP5_in_12': 'Dependencies',
+        'JLTP5_in_13': 'Programme',
+        'JLTP5_in_14': 'Active Travel / LCWIP Package',
+        'JLTP5_in_15': 'CRSTS2',
+        'JLTP5_in_16': 'CRSTS2 Rationale',
+        'JLTP5_in_17': 'Notes / Comments',
+        'JLTP5_in_18': 'Overview',
+        'JLTP5_in_19': 'Package Ref',
+        'JLTP5_in_20': '-' // Mapped to dash as requested
+    };
+    
+    const renamedProperties = {};
+    
+    Object.keys(properties).forEach(key => {
+        if (attributeMap.hasOwnProperty(key)) {
+            const newKey = attributeMap[key];
+            if (newKey !== null) { // Only include if not marked for removal
+                renamedProperties[newKey] = properties[key];
+            }
+        } else {
+            // Keep attributes not in the map as they are
+            renamedProperties[key] = properties[key];
+        }
+    });
+    
+    return renamedProperties;
+}
+
+// Function to create popup content showing all attributes
+function createFullPopupContent(feature, groupName, layerTitle = null) {
+    let properties = feature.properties || {};
+    
+    // Apply TCR attribute renaming if this is a TCR layer
+    if (groupName === 'tcrSchemes') {
+        properties = renameTCRAttributes(properties);
+    }
+    
+    let popupContent = '<div class="taf-popup">';
+    popupContent += `<div class="popup-header">${layerTitle || formatLayerName(groupName)}</div>`;
+    popupContent += '<table class="popup-table">';
+    
+    if (Object.keys(properties).length > 0) {
+        Object.keys(properties).forEach(key => {
+            const value = properties[key];
+            if (value !== null && value !== undefined && value !== '') {
+                popupContent += `<tr><td><strong>${formatPropertyName(key)}:</strong></td><td>${formatPropertyValue(value)}</td></tr>`;
+            }
+        });
+    } else {
+        popupContent += '<tr><td colspan="2">No attribute data available</td></tr>';
+    }
+    
+    popupContent += '</table></div>';
+    return popupContent;
 }
 
 // Function to transform British National Grid coordinates to WGS84 using proj4
@@ -1186,12 +1355,7 @@ async function loadGrowthZones() {
                 fillOpacity: 0 // no fill
             },
             onEachFeature: function(feature, layer) {
-                let popupContent = '<div class="taf-popup">';
-                popupContent += '<div class="popup-header">Growth Zone</div>';
-                popupContent += '<table class="popup-table">';
-                popupContent += '<tr><td><strong>Name:</strong></td><td>' + (feature.properties.Name || 'N/A') + '</td></tr>';
-                popupContent += '<tr><td><strong>Growth Type:</strong></td><td>' + (feature.properties.GrowthType || 'N/A') + '</td></tr>';
-                popupContent += '</table></div>';
+                const popupContent = createFullPopupContent(feature, 'growthZones', 'Growth Zone');
                 layer.bindPopup(popupContent);
             }
         }).addTo(layerGroups.growthZones);
@@ -1216,15 +1380,7 @@ async function loadHousingData() {
                 fillOpacity: 0
             },
             onEachFeature: function(feature, layer) {
-                let popupContent = '<div class="taf-popup">';
-                popupContent += '<div class="popup-header">Housing</div>';
-                popupContent += '<table class="popup-table">';
-                Object.keys(feature.properties).forEach(key => {
-                    if (feature.properties[key] !== null) {
-                        popupContent += '<tr><td><strong>' + key + ':</strong></td><td>' + feature.properties[key] + '</td></tr>';
-                    }
-                });
-                popupContent += '</table></div>';
+                const popupContent = createFullPopupContent(feature, 'housing', 'Housing');
                 layer.bindPopup(popupContent);
             }
         }).addTo(layerGroups.housing);
@@ -1267,15 +1423,7 @@ async function loadPTALData() {
                 };
             },
             onEachFeature: function(feature, layer) {
-                let popupContent = '<div class="taf-popup">';
-                popupContent += '<div class="popup-header">PTAL (Public Transport Accessibility Level)</div>';
-                popupContent += '<table class="popup-table">';
-                Object.keys(feature.properties).forEach(key => {
-                    if (feature.properties[key] !== null) {
-                        popupContent += '<tr><td><strong>' + key + ':</strong></td><td>' + feature.properties[key] + '</td></tr>';
-                    }
-                });
-                popupContent += '</table></div>';
+                const popupContent = createFullPopupContent(feature, 'ptal', 'PTAL (Public Transport Accessibility Level)');
                 layer.bindPopup(popupContent);
             }
         }).addTo(layerGroups.ptal);
@@ -1410,15 +1558,8 @@ async function loadRailStations() {
                 });
             },
             onEachFeature: function(feature, layer) {
-                const props = feature.properties;
-                layer.bindPopup(`
-                    <h4>${props.name || 'Rail Station'}</h4>
-                    <table class="popup-table">
-                        <tr><th>Property</th><th>Value</th></tr>
-                        <tr><td>Type</td><td>${props.type || 'Rail Station'}</td></tr>
-                        <tr><td>Operator</td><td>${props.operator || 'N/A'}</td></tr>
-                    </table>
-                `);
+                const popupContent = createFullPopupContent(feature, 'railStations', 'Rail Station');
+                layer.bindPopup(popupContent);
             }
         });
         layerGroups.railStations.addLayer(railStationsLayer);
@@ -1478,15 +1619,7 @@ async function loadPTALDataAsync() {
                     };
                 },
                 onEachFeature: function(feature, layer) {
-                    let popupContent = '<div class="taf-popup">';
-                    popupContent += '<div class="popup-header">PTAL (Public Transport Accessibility Level)</div>';
-                    popupContent += '<table class="popup-table">';
-                    Object.keys(feature.properties).forEach(key => {
-                        if (feature.properties[key] !== null) {
-                            popupContent += '<tr><td><strong>' + key + ':</strong></td><td>' + feature.properties[key] + '</td></tr>';
-                        }
-                    });
-                    popupContent += '</table></div>';
+                    const popupContent = createFullPopupContent(feature, 'ptal', 'PTAL (Public Transport Accessibility Level)');
                     layer.bindPopup(popupContent);
                 }
             });
@@ -1534,17 +1667,8 @@ async function loadBusLinesAsync() {
                     opacity: 1
                 },
                 onEachFeature: function(feature, layer) {
-                    const props = feature.properties;
-                    layer.bindPopup(`
-                        <h4>Bus Route</h4>
-                        <table class="popup-table">
-                            <tr><th>Property</th><th>Value</th></tr>
-                            <tr><td>Route</td><td>${props.route || 'N/A'}</td></tr>
-                            <tr><td>Operator</td><td>${props.operator || 'N/A'}</td></tr>
-                            <tr><td>Mon AM</td><td>${props.MONAM || 'N/A'}</td></tr>
-                            <tr><td>Mon PM</td><td>${props.MONPM || 'N/A'}</td></tr>
-                        </table>
-                    `);
+                    const popupContent = createFullPopupContent(feature, 'busLines', 'Bus Route');
+                    layer.bindPopup(popupContent);
                 }
             });
             
@@ -1589,17 +1713,8 @@ async function loadBusStopsAsync() {
                     });
                 },
                 onEachFeature: function(feature, layer) {
-                    const props = feature.properties;
-                    layer.bindPopup(`
-                        <h4>${props.CommonName || 'Bus Stop'}</h4>
-                        <table class="popup-table">
-                            <tr><th>Property</th><th>Value</th></tr>
-                            <tr><td>Stop Code</td><td>${props.ATCOCode || 'N/A'}</td></tr>
-                            <tr><td>Bearing</td><td>${props.Bearing || 'N/A'}</td></tr>
-                            <tr><td>Mon AM</td><td>${props.MONAM || 'N/A'}</td></tr>
-                            <tr><td>Mon PM</td><td>${props.MONPM || 'N/A'}</td></tr>
-                        </table>
-                    `);
+                    const popupContent = createFullPopupContent(feature, 'busStops', 'Bus Stop');
+                    layer.bindPopup(popupContent);
                 }
             });
             
@@ -1734,16 +1849,8 @@ async function loadTCRSchemesData() {
                 });
             },
             onEachFeature: function(feature, layer) {
-                const props = feature.properties;
-                layer.bindPopup(`
-                    <h4>${props.name || 'TCR Point Scheme'}</h4>
-                    <table class="popup-table">
-                        <tr><th>Property</th><th>Value</th></tr>
-                        <tr><td>Scheme</td><td>${props.scheme || 'N/A'}</td></tr>
-                        <tr><td>Type</td><td>${props.type || 'N/A'}</td></tr>
-                        <tr><td>Status</td><td>${props.status || 'N/A'}</td></tr>
-                    </table>
-                `);
+                const popupContent = createFullPopupContent(feature, 'tcrSchemes', 'TCR Point Scheme');
+                layer.bindPopup(popupContent);
             }
         });
         layerGroups.tcrSchemes.addLayer(tcrPointsLayer);
@@ -1761,16 +1868,8 @@ async function loadTCRSchemesData() {
                 dashArray: '2, 2'
             },
             onEachFeature: function(feature, layer) {
-                const props = feature.properties;
-                layer.bindPopup(`
-                    <h4>${props.name || 'TCR Line Scheme'}</h4>
-                    <table class="popup-table">
-                        <tr><th>Property</th><th>Value</th></tr>
-                        <tr><td>Scheme</td><td>${props.scheme || 'N/A'}</td></tr>
-                        <tr><td>Type</td><td>${props.type || 'N/A'}</td></tr>
-                        <tr><td>Length</td><td>${props.length || 'N/A'}</td></tr>
-                    </table>
-                `);
+                const popupContent = createFullPopupContent(feature, 'tcrSchemes', 'TCR Line Scheme');
+                layer.bindPopup(popupContent);
             }
         });
         layerGroups.tcrSchemes.addLayer(tcrLinesLayer);
@@ -1789,16 +1888,8 @@ async function loadTCRSchemesData() {
                 dashArray: '2, 2'
             },
             onEachFeature: function(feature, layer) {
-                const props = feature.properties;
-                layer.bindPopup(`
-                    <h4>${props.name || 'TCR Polygon Scheme'}</h4>
-                    <table class="popup-table">
-                        <tr><th>Property</th><th>Value</th></tr>
-                        <tr><td>Scheme</td><td>${props.scheme || 'N/A'}</td></tr>
-                        <tr><td>Type</td><td>${props.type || 'N/A'}</td></tr>
-                        <tr><td>Area</td><td>${props.area || 'N/A'}</td></tr>
-                    </table>
-                `);
+                const popupContent = createFullPopupContent(feature, 'tcrSchemes', 'TCR Polygon Scheme');
+                layer.bindPopup(popupContent);
             }
         });
         layerGroups.tcrSchemes.addLayer(tcrPolygonsLayer);
