@@ -33,6 +33,15 @@ function initializeMap() {
     layerGroups.growthZones = L.layerGroup().addTo(map);
     layerGroups.housing = L.layerGroup().addTo(map);
     layerGroups.ptal = L.layerGroup().addTo(map);
+    // Initialize individual PTAL category layer groups
+    layerGroups.ptal01a = L.layerGroup().addTo(map);
+    layerGroups.ptal1b = L.layerGroup().addTo(map);
+    layerGroups.ptal2 = L.layerGroup().addTo(map);
+    layerGroups.ptal3 = L.layerGroup().addTo(map);
+    layerGroups.ptal4 = L.layerGroup().addTo(map);
+    layerGroups.ptal5 = L.layerGroup().addTo(map);
+    layerGroups.ptal6a = L.layerGroup().addTo(map);
+    layerGroups.ptal6b = L.layerGroup().addTo(map);
     layerGroups.busLines = L.layerGroup().addTo(map);
     layerGroups.busStops = L.layerGroup().addTo(map);
     layerGroups.railStations = L.layerGroup().addTo(map);
@@ -76,8 +85,13 @@ function setupLegendControls() {
     const layerCheckboxes = document.querySelectorAll('input[type="checkbox"]:not([name])');
     layerCheckboxes.forEach(checkbox => {
         checkbox.addEventListener('change', function() {
-            const layerId = this.id.replace(/-/g, '');
-            const camelCaseId = toCamelCase(this.id);
+            const layerId = this.id;
+            let camelCaseId = toCamelCase(layerId);
+            
+            // Handle special PTAL category IDs
+            if (layerId.startsWith('ptal-')) {
+                camelCaseId = layerId.replace(/-/g, '');
+            }
             
             if (layerGroups[camelCaseId]) {
                 if (this.checked) {
@@ -232,42 +246,49 @@ async function loadPTALData() {
         const data = await response.json();
         const transformedData = transformGeoJSON(data);
         
-        L.geoJSON(transformedData, {
-            style: function(feature) {
-                // PTAL categories: 0 and 1a (dark blue), 1b (blue), 2 (light blue), 3 (green), 4 (yellow), 5 (orange), 6a (red), 6b (dark red)
-                // Fallback to green/yellow if not matched
-                const ptal = (feature.properties.PTAL || feature.properties.ptal || '').toString().toLowerCase();
-                let fillColor = '#cccccc';
-                if (ptal === '0' || ptal === '1a') fillColor = '#08306b'; // dark blue for both 0 and 1a
-                else if (ptal === '1b') fillColor = '#2171b5'; // blue
-                else if (ptal === '2') fillColor = '#6baed6'; // light blue
-                else if (ptal === '3') fillColor = '#31a354'; // green
-                else if (ptal === '4') fillColor = '#fed976'; // yellow
-                else if (ptal === '5') fillColor = '#fd8d3c'; // orange
-                else if (ptal === '6a') fillColor = '#e31a1c'; // red
-                else if (ptal === '6b') fillColor = '#99000d'; // dark red
-                else fillColor = '#b2df8a'; // fallback green/yellow
-                return {
-                    fillColor: fillColor,
-                    weight: 0,
-                    opacity: 0,
-                    color: 'transparent',
-                    fillOpacity: 0.7
-                };
-            },
-            onEachFeature: function(feature, layer) {
-                let popupContent = '<div class="taf-popup">';
-                popupContent += '<div class="popup-header">PTAL (Public Transport Accessibility Level)</div>';
-                popupContent += '<table class="popup-table">';
-                Object.keys(feature.properties).forEach(key => {
-                    if (feature.properties[key] !== null) {
-                        popupContent += '<tr><td><strong>' + key + ':</strong></td><td>' + feature.properties[key] + '</td></tr>';
+        // Define PTAL categories and their colors
+        const ptalCategories = {
+            '0': { color: '#08306b', layerGroup: 'ptal01a' },
+            '1a': { color: '#08306b', layerGroup: 'ptal01a' },
+            '1b': { color: '#2171b5', layerGroup: 'ptal1b' },
+            '2': { color: '#6baed6', layerGroup: 'ptal2' },
+            '3': { color: '#31a354', layerGroup: 'ptal3' },
+            '4': { color: '#fed976', layerGroup: 'ptal4' },
+            '5': { color: '#fd8d3c', layerGroup: 'ptal5' },
+            '6a': { color: '#e31a1c', layerGroup: 'ptal6a' },
+            '6b': { color: '#99000d', layerGroup: 'ptal6b' }
+        };
+        
+        // Process each feature and add to appropriate layer group
+        transformedData.features.forEach(feature => {
+            const ptal = (feature.properties.PTAL || feature.properties.ptal || '').toString().toLowerCase();
+            const category = ptalCategories[ptal];
+            
+            if (category) {
+                const geoJsonLayer = L.geoJSON(feature, {
+                    style: {
+                        fillColor: category.color,
+                        weight: 0,
+                        opacity: 0,
+                        color: 'transparent',
+                        fillOpacity: 0.7
+                    },
+                    onEachFeature: function(feature, layer) {
+                        let popupContent = '<div class="taf-popup">';
+                        popupContent += '<div class="popup-header">PTAL (Public Transport Accessibility Level)</div>';
+                        popupContent += '<table class="popup-table">';
+                        Object.keys(feature.properties).forEach(key => {
+                            if (feature.properties[key] !== null) {
+                                popupContent += '<tr><td><strong>' + key + ':</strong></td><td>' + feature.properties[key] + '</td></tr>';
+                            }
+                        });
+                        popupContent += '</table></div>';
+                        layer.bindPopup(popupContent);
                     }
                 });
-                popupContent += '</table></div>';
-                layer.bindPopup(popupContent);
+                layerGroups[category.layerGroup].addLayer(geoJsonLayer);
             }
-        }).addTo(layerGroups.ptal);
+        });
     } catch (error) {
         console.error('Error loading PTAL data:', error);
     }
