@@ -31,12 +31,12 @@ function initializeMap() {
     map.createPane('transportLayers').style.zIndex = 500;
     map.createPane('pointLayers').style.zIndex = 600;
 
-    // Initialize layer groups
+    // Initialize layer groups - only add default layers to map
     layerGroups.growthZones = L.layerGroup().addTo(map);
     layerGroups.housing = L.layerGroup().addTo(map);
-    layerGroups.ptal = L.layerGroup().addTo(map);
-    layerGroups.busLines = L.layerGroup().addTo(map);
-    layerGroups.busStops = L.layerGroup().addTo(map);
+    layerGroups.ptal = L.layerGroup(); // Don't add to map by default
+    layerGroups.busLines = L.layerGroup(); // Don't add to map by default
+    layerGroups.busStops = L.layerGroup(); // Don't add to map by default
     layerGroups.railStations = L.layerGroup().addTo(map);
     layerGroups.tcrSchemes = L.layerGroup().addTo(map);
 
@@ -254,8 +254,10 @@ function setupLayerIcons() {
     document.querySelectorAll('.palette-icon').forEach(icon => {
         icon.addEventListener('click', (e) => {
             e.stopPropagation();
-            const layerName = e.target.getAttribute('data-layer');
-            openStylingModal(layerName);
+            const layerName = e.currentTarget.getAttribute('data-layer');
+            if (layerName) {
+                openStylingModal(layerName);
+            }
         });
     });
     
@@ -263,8 +265,10 @@ function setupLayerIcons() {
     document.querySelectorAll('.zoom-icon').forEach(icon => {
         icon.addEventListener('click', (e) => {
             e.stopPropagation();
-            const layerName = e.target.getAttribute('data-layer');
-            zoomToLayer(layerName);
+            const layerName = e.currentTarget.getAttribute('data-layer');
+            if (layerName) {
+                zoomToLayer(layerName);
+            }
         });
     });
     
@@ -272,14 +276,19 @@ function setupLayerIcons() {
     document.querySelectorAll('.filter-icon').forEach(icon => {
         icon.addEventListener('click', (e) => {
             e.stopPropagation();
-            const layerName = e.target.getAttribute('data-layer');
-            openFilterModal(layerName);
+            const layerName = e.currentTarget.getAttribute('data-layer');
+            if (layerName) {
+                openFilterModal(layerName);
+            }
         });
     });
 }
 
 function zoomToLayer(layerName) {
-    const layerGroup = layerGroups[layerName.replace('-', '')]; // Convert kebab-case to camelCase
+    if (!layerName) {
+        console.warn('No layer name provided for zoom function');
+        return;
+    }
     
     // Alternative mapping for layers that don't follow the simple pattern
     const layerMapping = {
@@ -593,12 +602,22 @@ function transformGeoJSON(geojson) {
 }
 
 async function loadSampleData() {
-    // Load real GeoJSON data files
-    await loadGrowthZones();
-    await loadHousingData(); 
-    await loadPTALData();
-    await loadTransportInfrastructure();
-    await loadTCRSchemesData();
+    // Load priority layers first (visible by default)
+    await Promise.all([
+        loadGrowthZones(),
+        loadHousingData(),
+        loadRailStations(),
+        loadTCRSchemesData()
+    ]);
+    
+    // Load heavy layers lazily in the background (not visible by default)
+    setTimeout(async () => {
+        await Promise.all([
+            loadPTALData(),
+            loadBusInfrastructure()
+        ]);
+        console.log('Background layers loaded');
+    }, 100);
 }
 
 // Load Growth Zones data
@@ -823,7 +842,43 @@ function createSamplePTAL() {
     });
 }
 
-async function loadTransportInfrastructure() {
+async function loadRailStations() {
+    try {
+        // Load Rail Stations only
+        const railStationsResponse = await fetch('data/rail_stations.geojson');
+        const railStationsData = await railStationsResponse.json();
+        const transformedRailStations = transformGeoJSON(railStationsData);
+        
+        const railStationsLayer = L.geoJSON(transformedRailStations, {
+            pointToLayer: function(feature, latlng) {
+                return L.circleMarker(latlng, {
+                    color: '#8B4513', // brown
+                    fillColor: '#8B4513',
+                    fillOpacity: 1,
+                    radius: 5,
+                    weight: 2
+                });
+            },
+            onEachFeature: function(feature, layer) {
+                const props = feature.properties;
+                layer.bindPopup(`
+                    <h4>${props.name || 'Rail Station'}</h4>
+                    <table class="popup-table">
+                        <tr><th>Property</th><th>Value</th></tr>
+                        <tr><td>Type</td><td>${props.type || 'Rail Station'}</td></tr>
+                        <tr><td>Operator</td><td>${props.operator || 'N/A'}</td></tr>
+                    </table>
+                `);
+            }
+        });
+        layerGroups.railStations.addLayer(railStationsLayer);
+
+    } catch (error) {
+        console.error('Error loading rail stations:', error);
+    }
+}
+
+async function loadBusInfrastructure() {
     try {
         // Load Bus Lines
         const busLinesResponse = await fetch('data/bus-lines.geojson');
@@ -883,38 +938,15 @@ async function loadTransportInfrastructure() {
         });
         layerGroups.busStops.addLayer(busStopsLayer);
 
-        // Load Rail Stations
-        const railStationsResponse = await fetch('data/rail_stations.geojson');
-        const railStationsData = await railStationsResponse.json();
-        const transformedRailStations = transformGeoJSON(railStationsData);
-        
-        const railStationsLayer = L.geoJSON(transformedRailStations, {
-            pointToLayer: function(feature, latlng) {
-                return L.circleMarker(latlng, {
-                    color: '#8B4513', // brown
-                    fillColor: '#8B4513',
-                    fillOpacity: 1,
-                    radius: 5,
-                    weight: 2
-                });
-            },
-            onEachFeature: function(feature, layer) {
-                const props = feature.properties;
-                layer.bindPopup(`
-                    <h4>${props.name || 'Rail Station'}</h4>
-                    <table class="popup-table">
-                        <tr><th>Property</th><th>Value</th></tr>
-                        <tr><td>Type</td><td>${props.type || 'Rail Station'}</td></tr>
-                        <tr><td>Operator</td><td>${props.operator || 'N/A'}</td></tr>
-                    </table>
-                `);
-            }
-        });
-        layerGroups.railStations.addLayer(railStationsLayer);
-
     } catch (error) {
-        console.error('Error loading transport infrastructure:', error);
+        console.error('Error loading bus infrastructure:', error);
     }
+}
+
+async function loadTransportInfrastructure() {
+    // Legacy function - now split into separate functions
+    await loadRailStations();
+    await loadBusInfrastructure();
 }
 
 async function loadTCRSchemesData() {
