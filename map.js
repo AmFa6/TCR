@@ -340,7 +340,9 @@ function setupLegendControls() {
             // Show/hide PTAL individual controls
             if (layerId === 'ptal') {
                 const ptalControls = document.getElementById('ptal-individual-controls');
-                ptalControls.style.display = this.checked ? 'block' : 'none';
+                if (ptalControls) {
+                    ptalControls.style.display = this.checked ? 'block' : 'none';
+                }
             }
         });
     });
@@ -358,6 +360,11 @@ function setupStylingModal() {
     const modal = document.getElementById('styling-modal');
     const closeBtn = document.querySelector('.close');
     
+    if (!modal || !closeBtn) {
+        console.warn('Styling modal elements not found, skipping setup');
+        return;
+    }
+    
     // Close modal when clicking X or outside
     closeBtn.onclick = () => modal.style.display = 'none';
     window.onclick = (event) => {
@@ -367,43 +374,61 @@ function setupStylingModal() {
     };
     
     // Add click handlers for legend elements
-    document.getElementById('ptal-color-scale').addEventListener('click', () => {
-        document.getElementById('modal-title').textContent = 'PTAL Styling';
-        modal.style.display = 'block';
-    });
+    const ptalColorScale = document.getElementById('ptal-color-scale');
+    if (ptalColorScale) {
+        ptalColorScale.addEventListener('click', () => {
+            const modalTitle = document.getElementById('modal-title');
+            if (modalTitle) {
+                modalTitle.textContent = 'PTAL Styling';
+            }
+            modal.style.display = 'block';
+        });
+    }
     
     // Opacity slider handler
     const opacitySlider = document.getElementById('opacity-slider');
     const opacityValue = document.getElementById('opacity-value');
-    opacitySlider.addEventListener('input', (e) => {
-        opacityValue.textContent = Math.round(e.target.value * 100) + '%';
-    });
+    if (opacitySlider && opacityValue) {
+        opacitySlider.addEventListener('input', (e) => {
+            opacityValue.textContent = Math.round(e.target.value * 100) + '%';
+        });
+    }
     
     // Size slider handler
     const sizeSlider = document.getElementById('size-slider');
     const sizeValue = document.getElementById('size-value');
-    sizeSlider.addEventListener('input', (e) => {
-        sizeValue.textContent = e.target.value;
-    });
+    if (sizeSlider && sizeValue) {
+        sizeSlider.addEventListener('input', (e) => {
+            sizeValue.textContent = e.target.value;
+        });
+    }
     
     // Classification method handler
     const classificationMethod = document.getElementById('classification-method');
     const graduatedOptions = document.getElementById('graduated-options');
-    classificationMethod.addEventListener('change', (e) => {
-        graduatedOptions.style.display = e.target.value === 'graduated' ? 'block' : 'none';
-    });
+    if (classificationMethod && graduatedOptions) {
+        classificationMethod.addEventListener('change', (e) => {
+            graduatedOptions.style.display = e.target.value === 'graduated' ? 'block' : 'none';
+        });
+    }
     
     // Apply styling button
-    document.getElementById('apply-styling').addEventListener('click', () => {
-        applyStyling();
-        modal.style.display = 'none';
-    });
+    const applyButton = document.getElementById('apply-styling');
+    if (applyButton) {
+        applyButton.addEventListener('click', () => {
+            applyStyling();
+            modal.style.display = 'none';
+        });
+    }
     
     // Reset styling button
-    document.getElementById('reset-styling').addEventListener('click', () => {
-        resetStyling();
-        modal.style.display = 'none';
-    });
+    const resetButton = document.getElementById('reset-styling');
+    if (resetButton) {
+        resetButton.addEventListener('click', () => {
+            resetStyling();
+            modal.style.display = 'none';
+        });
+    }
 }
 
 function applyStyling() {
@@ -465,6 +490,11 @@ function setupFilterModal() {
     const filterModal = document.getElementById('filter-modal');
     const filterCloseBtn = document.querySelector('.filter-close');
     
+    if (!filterModal || !filterCloseBtn) {
+        console.warn('Filter modal elements not found, skipping setup');
+        return;
+    }
+    
     // Close filter modal
     filterCloseBtn.onclick = () => filterModal.style.display = 'none';
     window.onclick = (event) => {
@@ -476,34 +506,50 @@ function setupFilterModal() {
     // Filter attribute change handler
     const filterAttribute = document.getElementById('filter-attribute');
     const filterControls = document.getElementById('filter-controls');
-    filterAttribute.addEventListener('change', (e) => {
-        filterControls.style.display = e.target.value ? 'block' : 'none';
-    });
+    if (filterAttribute && filterControls) {
+        filterAttribute.addEventListener('change', (e) => {
+            filterControls.style.display = e.target.value ? 'block' : 'none';
+        });
+    }
     
     // Filter operator change handler
     const filterOperator = document.getElementById('filter-operator');
     const filterValue2Group = document.getElementById('filter-value2-group');
-    filterOperator.addEventListener('change', (e) => {
-        filterValue2Group.style.display = e.target.value === 'between' ? 'block' : 'none';
-    });
+    if (filterOperator && filterValue2Group) {
+        filterOperator.addEventListener('change', (e) => {
+            filterValue2Group.style.display = e.target.value === 'between' ? 'block' : 'none';
+        });
+    }
     
     // Filter buttons
-    document.getElementById('apply-filter').addEventListener('click', () => {
-        applyAttributeFilter();
-    });
+    const applyFilterBtn = document.getElementById('apply-filter');
+    if (applyFilterBtn) {
+        applyFilterBtn.addEventListener('click', () => {
+            applyAttributeFilter();
+        });
+    }
     
-    document.getElementById('clear-all-filters').addEventListener('click', () => {
-        clearAllFilters();
-        filterModal.style.display = 'none';
-    });
+    const clearAllFiltersBtn = document.getElementById('clear-all-filters');
+    if (clearAllFiltersBtn) {
+        clearAllFiltersBtn.addEventListener('click', () => {
+            clearAllFilters();
+            filterModal.style.display = 'none';
+        });
+    }
     
-    document.getElementById('filter-visible-extent').addEventListener('click', () => {
-        filterToVisibleExtent();
-    });
+    const filterVisibleExtentBtn = document.getElementById('filter-visible-extent');
+    if (filterVisibleExtentBtn) {
+        filterVisibleExtentBtn.addEventListener('click', () => {
+            filterToVisibleExtent();
+        });
+    }
     
-    document.getElementById('clear-spatial-filter').addEventListener('click', () => {
-        clearSpatialFilter();
-    });
+    const clearSpatialFilterBtn = document.getElementById('clear-spatial-filter');
+    if (clearSpatialFilterBtn) {
+        clearSpatialFilterBtn.addEventListener('click', () => {
+            clearSpatialFilter();
+        });
+    }
 }
 
 function setupLayerIcons() {
@@ -647,6 +693,11 @@ function openStylingModal(layerName) {
     const modal = document.getElementById('styling-modal');
     const title = document.getElementById('modal-title');
     
+    if (!modal) {
+        console.warn('Styling modal not found');
+        return;
+    }
+    
     // Set modal title based on layer
     const layerTitles = {
         'growth-zones': 'Growth Zones Styling',
@@ -658,7 +709,9 @@ function openStylingModal(layerName) {
         'rail-stations': 'Rail Stations Styling'
     };
     
-    title.textContent = layerTitles[layerName] || 'Layer Styling';
+    if (title) {
+        title.textContent = layerTitles[layerName] || 'Layer Styling';
+    }
     modal.setAttribute('data-current-layer', layerName);
     modal.style.display = 'block';
 }
@@ -667,6 +720,11 @@ function openFilterModal(layerName) {
     const filterModal = document.getElementById('filter-modal');
     const filterTitle = document.getElementById('filter-modal-title');
     const filterAttribute = document.getElementById('filter-attribute');
+    
+    if (!filterModal) {
+        console.warn('Filter modal not found');
+        return;
+    }
     
     // Set modal title based on layer
     const layerTitles = {
@@ -679,7 +737,9 @@ function openFilterModal(layerName) {
         'rail-stations': 'Rail Stations Filter'
     };
     
-    filterTitle.textContent = layerTitles[layerName] || 'Layer Filter';
+    if (filterTitle) {
+        filterTitle.textContent = layerTitles[layerName] || 'Layer Filter';
+    }
     filterModal.setAttribute('data-current-layer', layerName);
     
     // Populate available attributes for the layer
@@ -761,11 +821,17 @@ function populateFilterAttributes(layerName) {
 }
 
 function applyAttributeFilter() {
-    const layerName = document.getElementById('filter-modal').getAttribute('data-current-layer');
-    const attribute = document.getElementById('filter-attribute').value;
-    const operator = document.getElementById('filter-operator').value;
-    const value1 = document.getElementById('filter-value').value;
-    const value2 = document.getElementById('filter-value2').value;
+    const filterModal = document.getElementById('filter-modal');
+    if (!filterModal) {
+        console.warn('Filter modal not found');
+        return;
+    }
+    
+    const layerName = filterModal.getAttribute('data-current-layer');
+    const attribute = document.getElementById('filter-attribute')?.value;
+    const operator = document.getElementById('filter-operator')?.value;
+    const value1 = document.getElementById('filter-value')?.value;
+    const value2 = document.getElementById('filter-value2')?.value;
     
     if (!attribute || !value1) {
         alert('Please select an attribute and enter a value');
@@ -837,7 +903,10 @@ function clearAllFilters() {
     });
     
     // Clear active filters display
-    document.getElementById('active-filters-list').innerHTML = '<p class="no-filters">No active filters</p>';
+    const activeFiltersList = document.getElementById('active-filters-list');
+    if (activeFiltersList) {
+        activeFiltersList.innerHTML = '<p class="no-filters">No active filters</p>';
+    }
 }
 
 function filterToVisibleExtent() {
@@ -853,6 +922,11 @@ function clearSpatialFilter() {
 
 function updateActiveFiltersDisplay(layerName, attribute, operator, value1, value2) {
     const activeFiltersList = document.getElementById('active-filters-list');
+    if (!activeFiltersList) {
+        console.warn('Active filters list element not found');
+        return;
+    }
+    
     const noFilters = activeFiltersList.querySelector('.no-filters');
     if (noFilters) noFilters.remove();
     
@@ -882,7 +956,7 @@ function removeFilter(button, layerName) {
     
     // Check if no filters remain
     const activeFiltersList = document.getElementById('active-filters-list');
-    if (activeFiltersList.children.length === 0) {
+    if (activeFiltersList && activeFiltersList.children.length === 0) {
         activeFiltersList.innerHTML = '<p class="no-filters">No active filters</p>';
     }
 }
