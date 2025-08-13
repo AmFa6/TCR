@@ -16,6 +16,30 @@ html, body {
     z-index: 1;
 }
 
+/* Multi-layer popup styling */
+.multi-layer-popup .leaflet-popup-content-wrapper {
+    border-radius: 6px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+
+.multi-layer-popup .leaflet-popup-content {
+    margin: 10px;
+    font-family: 'Trebuchet MS', sans-serif;
+    font-size: 13px;
+    line-height: 1.4;
+}
+
+.multi-layer-popup button:hover:not(:disabled) {
+    background-color: #0056b3 !important;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.multi-layer-popup button:disabled {
+    background-color: #6c757d !important;
+    opacity: 0.6;
+}
+
 /* Right-side legend panel (TAF style) */
 #legend {
     position: absolute;

@@ -42,7 +42,255 @@ function initializeMap() {
 
     // Add scale control
     L.control.scale({position: 'bottomleft'}).addTo(map);
+    
+    // Setup multi-layer popup system
+    setupMultiLayerPopups();
 }
+
+// Global variables for multi-layer popup system
+let currentPopupLayers = [];
+let currentPopupIndex = 0;
+let activePopup = null;
+
+function setupMultiLayerPopups() {
+    // Override the default popup behavior with higher priority
+    map.on('click', function(e) {
+        handleMapClick(e);
+    });
+}
+
+function handleMapClick(e) {
+    // Clear any existing popup
+    map.closePopup();
+    currentPopupLayers = [];
+    currentPopupIndex = 0;
+    activePopup = null;
+    
+    // Find all layers at click point
+    const clickedLayers = findLayersAtPoint(e.latlng, e.containerPoint);
+    
+    if (clickedLayers.length === 0) {
+        return; // No layers clicked
+    }
+    
+    // Store the layers for navigation
+    currentPopupLayers = clickedLayers;
+    currentPopupIndex = 0;
+    
+    // Show the first popup
+    showPopupAtIndex(0, e.latlng);
+}
+
+function findLayersAtPoint(latlng, point) {
+    const foundLayers = [];
+    
+    // Iterate through all active layer groups
+    Object.keys(layerGroups).forEach(groupName => {
+        const layerGroup = layerGroups[groupName];
+        
+        if (map.hasLayer(layerGroup)) {
+            // Recursively search through layers
+            searchLayerGroup(layerGroup, latlng, point, groupName, foundLayers);
+        }
+    });
+    
+    return foundLayers;
+}
+
+function searchLayerGroup(layerGroup, latlng, point, groupName, foundLayers) {
+    layerGroup.eachLayer(layer => {
+        if (layer instanceof L.LayerGroup) {
+            // Recursively search nested layer groups
+            searchLayerGroup(layer, latlng, point, groupName, foundLayers);
+        } else if (layer.feature) {
+            // Check if this layer contains the click point
+            if (isLayerAtPoint(layer, latlng, point)) {
+                foundLayers.push({
+                    layer: layer,
+                    groupName: groupName,
+                    feature: layer.feature
+                });
+            }
+        }
+    });
+}
+
+function isLayerAtPoint(layer, latlng, point) {
+    // For point features
+    if (layer instanceof L.Marker || layer instanceof L.CircleMarker) {
+        const layerPoint = map.latLngToContainerPoint(layer.getLatLng());
+        const distance = Math.sqrt(
+            Math.pow(layerPoint.x - point.x, 2) + 
+            Math.pow(layerPoint.y - point.y, 2)
+        );
+        return distance <= 10; // 10 pixel tolerance
+    }
+    
+    // For polygon/line features
+    if (layer instanceof L.Polygon || layer instanceof L.Polyline) {
+        // Use Leaflet's built-in methods for geometric containment
+        if (layer instanceof L.Polygon) {
+            return isPointInPolygon(latlng, layer.getLatLngs());
+        } else if (layer instanceof L.Polyline) {
+            return isPointNearPolyline(latlng, layer.getLatLngs(), point);
+        }
+    }
+    
+    return false;
+}
+
+function isPointInPolygon(point, polygon) {
+    // Handle nested arrays (polygons with holes)
+    const coords = Array.isArray(polygon[0]) ? polygon[0] : polygon;
+    
+    let inside = false;
+    for (let i = 0, j = coords.length - 1; i < coords.length; j = i++) {
+        if (((coords[i].lat > point.lat) !== (coords[j].lat > point.lat)) &&
+            (point.lng < (coords[j].lng - coords[i].lng) * (point.lat - coords[i].lat) / (coords[j].lat - coords[i].lat) + coords[i].lng)) {
+            inside = !inside;
+        }
+    }
+    return inside;
+}
+
+function isPointNearPolyline(point, polyline, clickPoint) {
+    // Simple distance check for lines
+    const coords = Array.isArray(polyline[0]) ? polyline[0] : polyline;
+    const threshold = 20; // pixels
+    
+    for (let i = 0; i < coords.length - 1; i++) {
+        const p1 = map.latLngToContainerPoint(coords[i]);
+        const p2 = map.latLngToContainerPoint(coords[i + 1]);
+        
+        const distance = distanceToLineSegment(clickPoint, p1, p2);
+        if (distance <= threshold) {
+            return true;
+        }
+    }
+    return false;
+}
+
+function distanceToLineSegment(point, lineStart, lineEnd) {
+    const A = point.x - lineStart.x;
+    const B = point.y - lineStart.y;
+    const C = lineEnd.x - lineStart.x;
+    const D = lineEnd.y - lineStart.y;
+    
+    const dot = A * C + B * D;
+    const lenSq = C * C + D * D;
+    
+    if (lenSq === 0) return Math.sqrt(A * A + B * B);
+    
+    const t = Math.max(0, Math.min(1, dot / lenSq));
+    const projection = {
+        x: lineStart.x + t * C,
+        y: lineStart.y + t * D
+    };
+    
+    const dx = point.x - projection.x;
+    const dy = point.y - projection.y;
+    return Math.sqrt(dx * dx + dy * dy);
+}
+
+function showPopupAtIndex(index, latlng) {
+    if (index < 0 || index >= currentPopupLayers.length) {
+        return;
+    }
+    
+    const layerInfo = currentPopupLayers[index];
+    const feature = layerInfo.feature;
+    const groupName = layerInfo.groupName;
+    
+    // Build popup content using TAF style
+    let popupContent = '<div class="taf-popup">';
+    
+    // Add navigation header if multiple layers
+    if (currentPopupLayers.length > 1) {
+        popupContent += `
+            <div style="background: #f8f9fa; padding: 8px; margin-bottom: 10px; border-bottom: 1px solid #dee2e6; border-radius: 4px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
+                    <strong style="color: #495057; font-size: 12px;">${formatLayerName(groupName)}</strong>
+                    <div style="font-size: 11px; color: #6c757d;">
+                        ${index + 1} of ${currentPopupLayers.length}
+                    </div>
+                </div>
+                <div style="display: flex; gap: 5px;">
+                    <button onclick="previousPopup()" ${index === 0 ? 'disabled' : ''} 
+                            style="background: #007bff; color: white; border: none; padding: 3px 8px; border-radius: 3px; font-size: 11px; cursor: ${index === 0 ? 'not-allowed' : 'pointer'};">
+                        ← Prev
+                    </button>
+                    <button onclick="nextPopup()" ${index === currentPopupLayers.length - 1 ? 'disabled' : ''} 
+                            style="background: #007bff; color: white; border: none; padding: 3px 8px; border-radius: 3px; font-size: 11px; cursor: ${index === currentPopupLayers.length - 1 ? 'not-allowed' : 'pointer'};">
+                        Next →
+                    </button>
+                </div>
+            </div>
+        `;
+    }
+    
+    // Add popup header in TAF style
+    popupContent += `<div class="popup-header">${formatLayerName(groupName)}</div>`;
+    
+    // Add feature properties in TAF table style
+    popupContent += '<table class="popup-table">';
+    if (feature.properties) {
+        Object.keys(feature.properties).forEach(key => {
+            const value = feature.properties[key];
+            if (value !== null && value !== undefined && value !== '') {
+                popupContent += `<tr><td><strong>${formatPropertyName(key)}:</strong></td><td>${formatPropertyValue(value)}</td></tr>`;
+            }
+        });
+    }
+    popupContent += '</table></div>';
+    
+    // Create and show popup
+    activePopup = L.popup({
+        maxWidth: 300,
+        className: 'multi-layer-popup'
+    })
+    .setLatLng(latlng)
+    .setContent(popupContent)
+    .openOn(map);
+}
+
+function formatLayerName(groupName) {
+    const nameMap = {
+        'growthZones': 'Growth Zones',
+        'housing': 'Housing',
+        'ptal': 'PTAL',
+        'busLines': 'Bus Lines',
+        'busStops': 'Bus Stops',
+        'railStations': 'Rail Stations',
+        'tcrSchemes': 'CRSTS2 Schemes'
+    };
+    return nameMap[groupName] || groupName;
+}
+
+function formatPropertyName(key) {
+    return key.charAt(0).toUpperCase() + key.slice(1).replace(/[_-]/g, ' ');
+}
+
+function formatPropertyValue(value) {
+    if (typeof value === 'number') {
+        return value.toLocaleString();
+    }
+    return value;
+}
+
+// Global functions for popup navigation (called from popup buttons)
+window.previousPopup = function() {
+    if (currentPopupIndex > 0) {
+        currentPopupIndex--;
+        showPopupAtIndex(currentPopupIndex, activePopup.getLatLng());
+    }
+};
+
+window.nextPopup = function() {
+    if (currentPopupIndex < currentPopupLayers.length - 1) {
+        currentPopupIndex++;
+        showPopupAtIndex(currentPopupIndex, activePopup.getLatLng());
+    }
+};
 
 function setupLegendControls() {
     // Setup legend category collapsible functionality (TAF style)
@@ -75,7 +323,7 @@ function setupLegendControls() {
     }
 
     // Layer checkboxes
-    const layerCheckboxes = document.querySelectorAll('input[type="checkbox"]:not([name])');
+    const layerCheckboxes = document.querySelectorAll('input[type="checkbox"]:not([name]):not([id^="ptal-"])');
     layerCheckboxes.forEach(checkbox => {
         checkbox.addEventListener('change', function() {
             const layerId = this.id;
@@ -88,8 +336,17 @@ function setupLegendControls() {
                     map.removeLayer(layerGroups[camelCaseId]);
                 }
             }
+            
+            // Show/hide PTAL individual controls
+            if (layerId === 'ptal') {
+                const ptalControls = document.getElementById('ptal-individual-controls');
+                ptalControls.style.display = this.checked ? 'block' : 'none';
+            }
         });
     });
+    
+    // Setup PTAL individual controls
+    setupPTALControls();
     
     // Setup styling modal
     setupStylingModal();
@@ -284,6 +541,71 @@ function setupLayerIcons() {
     });
 }
 
+function setupPTALControls() {
+    // Setup PTAL select/deselect all buttons
+    const selectAllBtn = document.getElementById('ptal-select-all');
+    const deselectAllBtn = document.getElementById('ptal-deselect-all');
+    
+    if (selectAllBtn) {
+        selectAllBtn.addEventListener('click', () => {
+            const ptalCheckboxes = document.querySelectorAll('[id^="ptal-"]:not(#ptal)');
+            ptalCheckboxes.forEach(checkbox => {
+                checkbox.checked = true;
+            });
+            updatePTALLayer();
+        });
+    }
+    
+    if (deselectAllBtn) {
+        deselectAllBtn.addEventListener('click', () => {
+            const ptalCheckboxes = document.querySelectorAll('[id^="ptal-"]:not(#ptal)');
+            ptalCheckboxes.forEach(checkbox => {
+                checkbox.checked = false;
+            });
+            updatePTALLayer();
+        });
+    }
+    
+    // Setup individual PTAL checkbox handlers
+    const ptalCheckboxes = document.querySelectorAll('[id^="ptal-"]:not(#ptal)');
+    ptalCheckboxes.forEach(checkbox => {
+        checkbox.addEventListener('change', updatePTALLayer);
+    });
+}
+
+function updatePTALLayer() {
+    if (!layerGroups.ptal) return;
+    
+    const visibleCategories = [];
+    const ptalCheckboxes = document.querySelectorAll('[id^="ptal-"]:not(#ptal)');
+    
+    ptalCheckboxes.forEach(checkbox => {
+        if (checkbox.checked) {
+            const category = checkbox.id.replace('ptal-', '');
+            visibleCategories.push(category);
+        }
+    });
+    
+    // Function to recursively update all layers including nested ones
+    function updateLayerVisibility(layer) {
+        if (layer.getLayers) {
+            // This is a layer group, update all sub-layers
+            layer.getLayers().forEach(subLayer => updateLayerVisibility(subLayer));
+        } else if (layer.feature && layer.feature.properties) {
+            // This is a feature layer
+            const ptal = (layer.feature.properties.PTAL || layer.feature.properties.ptal || '').toString().toLowerCase();
+            if (visibleCategories.includes(ptal)) {
+                layer.setStyle({ fillOpacity: 0.7, opacity: 0 });
+            } else {
+                layer.setStyle({ fillOpacity: 0, opacity: 0 });
+            }
+        }
+    }
+    
+    // Update all PTAL layers including those loaded in chunks
+    updateLayerVisibility(layerGroups.ptal);
+}
+
 function zoomToLayer(layerName) {
     if (!layerName) {
         console.warn('No layer name provided for zoom function');
@@ -379,16 +701,25 @@ function populateFilterAttributes(layerName) {
         let featureCount = 0;
         
         layerGroup.eachLayer(layer => {
-            if (layer.feature && layer.feature.properties) {
-                featureCount++;
-                Object.keys(layer.feature.properties).forEach(key => {
-                    const value = layer.feature.properties[key];
-                    // Include attribute if it has a value (not null, undefined, or empty string)
-                    if (value !== null && value !== undefined && value !== '') {
-                        attributes.add(key);
-                    }
-                });
+            // Function to recursively get all features including nested ones
+            function getAllFeatures(currentLayer) {
+                if (currentLayer.getLayers) {
+                    // This is a layer group, get all sub-layers
+                    currentLayer.getLayers().forEach(subLayer => getAllFeatures(subLayer));
+                } else if (currentLayer.feature && currentLayer.feature.properties) {
+                    // This is a feature layer with properties
+                    featureCount++;
+                    Object.keys(currentLayer.feature.properties).forEach(key => {
+                        const value = currentLayer.feature.properties[key];
+                        // Include attribute if it has a value (not null, undefined, or empty string)
+                        if (value !== null && value !== undefined && value !== '') {
+                            attributes.add(key);
+                        }
+                    });
+                }
             }
+            
+            getAllFeatures(layer);
         });
         
         if (featureCount === 0) {
@@ -445,9 +776,14 @@ function applyAttributeFilter() {
     const layerGroup = layerGroups[camelCaseId];
     
     if (layerGroup) {
-        layerGroup.eachLayer(layer => {
-            if (layer.feature && layer.feature.properties) {
-                const propValue = layer.feature.properties[attribute];
+        // Function to recursively apply filter to all layers including nested ones
+        function applyFilterToLayer(currentLayer) {
+            if (currentLayer.getLayers) {
+                // This is a layer group, apply filter to all sub-layers
+                currentLayer.getLayers().forEach(subLayer => applyFilterToLayer(subLayer));
+            } else if (currentLayer.feature && currentLayer.feature.properties) {
+                // This is a feature layer
+                const propValue = currentLayer.feature.properties[attribute];
                 let showFeature = false;
                 
                 switch (operator) {
@@ -471,16 +807,19 @@ function applyAttributeFilter() {
                 
                 // Show/hide feature based on filter
                 if (showFeature) {
-                    if (layer.setStyle) {
-                        layer.setStyle({ opacity: layer.options.opacity || 1, fillOpacity: layer.options.fillOpacity || 0.7 });
+                    if (currentLayer.setStyle) {
+                        currentLayer.setStyle({ opacity: currentLayer.options.opacity || 1, fillOpacity: currentLayer.options.fillOpacity || 0.7 });
                     }
                 } else {
-                    if (layer.setStyle) {
-                        layer.setStyle({ opacity: 0, fillOpacity: 0 });
+                    if (currentLayer.setStyle) {
+                        currentLayer.setStyle({ opacity: 0, fillOpacity: 0 });
                     }
                 }
             }
-        });
+        }
+        
+        // Apply filter to all layers including those loaded in chunks
+        applyFilterToLayer(layerGroup);
         
         // Update active filters display
         updateActiveFiltersDisplay(layerName, attribute, operator, value1, value2);
@@ -643,14 +982,18 @@ async function loadSampleData() {
         loadTCRSchemesData()
     ]);
     
-    // Load heavy layers lazily in the background (not visible by default)
-    setTimeout(async () => {
-        await Promise.all([
-            loadPTALData(),
-            loadBusInfrastructure()
-        ]);
-        console.log('Background layers loaded');
-    }, 100);
+    // Fallback for browsers without requestIdleCallback
+    const scheduleBackgroundTask = window.requestIdleCallback || ((fn) => setTimeout(fn, 100));
+    
+    // Load heavy layers asynchronously in background without blocking UI
+    scheduleBackgroundTask(() => {
+        console.log('Starting background layer loading...');
+        loadPTALDataAsync();
+    });
+    
+    scheduleBackgroundTask(() => {
+        loadBusInfrastructureAsync();
+    });
 }
 
 // Load Growth Zones data
@@ -911,67 +1254,178 @@ async function loadRailStations() {
     }
 }
 
-async function loadBusInfrastructure() {
+// Load PTAL data asynchronously in chunks to avoid freezing UI
+async function loadPTALDataAsync() {
     try {
-        // Load Bus Lines
+        console.log('Loading PTAL data...');
+        showLoadingIndicator('Loading PTAL data in background...');
+        
+        const response = await fetch('./data/ptal.geojson');
+        const data = await response.json();
+        const transformedData = transformGeoJSON(data);
+        
+        // Define PTAL categories and their colors
+        const ptalCategories = {
+            '0': '#08306b',
+            '1a': '#08306b',
+            '1b': '#2171b5',
+            '2': '#6baed6',
+            '3': '#31a354',
+            '4': '#fed976',
+            '5': '#fd8d3c',
+            '6a': '#e31a1c',
+            '6b': '#99000d'
+        };
+        
+        // Process features in chunks to avoid blocking the UI
+        const chunkSize = 50; // Process 50 features at a time
+        const features = transformedData.features;
+        
+        for (let i = 0; i < features.length; i += chunkSize) {
+            const chunk = features.slice(i, i + chunkSize);
+            
+            // Process this chunk
+            const chunkGeoJSON = {
+                type: 'FeatureCollection',
+                features: chunk
+            };
+            
+            const chunkLayer = L.geoJSON(chunkGeoJSON, {
+                style: function(feature) {
+                    const ptal = (feature.properties.PTAL || feature.properties.ptal || '').toString().toLowerCase();
+                    const fillColor = ptalCategories[ptal] || '#b2df8a';
+                    
+                    return {
+                        fillColor: fillColor,
+                        weight: 0,
+                        opacity: 0,
+                        color: 'transparent',
+                        fillOpacity: 0.7
+                    };
+                },
+                onEachFeature: function(feature, layer) {
+                    let popupContent = '<div class="taf-popup">';
+                    popupContent += '<div class="popup-header">PTAL (Public Transport Accessibility Level)</div>';
+                    popupContent += '<table class="popup-table">';
+                    Object.keys(feature.properties).forEach(key => {
+                        if (feature.properties[key] !== null) {
+                            popupContent += '<tr><td><strong>' + key + ':</strong></td><td>' + feature.properties[key] + '</td></tr>';
+                        }
+                    });
+                    popupContent += '</table></div>';
+                    layer.bindPopup(popupContent);
+                }
+            });
+            
+            layerGroups.ptal.addLayer(chunkLayer);
+            
+            // Yield control back to the browser between chunks
+            await new Promise(resolve => setTimeout(resolve, 10));
+            
+            // Update progress
+            const progress = Math.round(((i + chunkSize) / features.length) * 100);
+            console.log(`PTAL loading progress: ${Math.min(progress, 100)}%`);
+        }
+        
+        hideLoadingIndicator();
+        console.log('PTAL data loaded successfully');
+    } catch (error) {
+        hideLoadingIndicator();
+        console.error('Error loading PTAL data:', error);
+    }
+}
+
+// Load bus infrastructure asynchronously in chunks
+async function loadBusInfrastructureAsync() {
+    try {
+        console.log('Loading bus infrastructure...');
+        showLoadingIndicator('Loading bus infrastructure in background...');
+        
+        // Load Bus Lines first
         const busLinesResponse = await fetch('data/bus-lines.geojson');
         const busLinesData = await busLinesResponse.json();
         const transformedBusLines = transformGeoJSON(busLinesData);
         
-        const busLinesLayer = L.geoJSON(transformedBusLines, {
-            style: {
-                color: '#008000', // green
-                weight: 2,
-                opacity: 1
-            },
-            onEachFeature: function(feature, layer) {
-                const props = feature.properties;
-                layer.bindPopup(`
-                    <h4>Bus Route</h4>
-                    <table class="popup-table">
-                        <tr><th>Property</th><th>Value</th></tr>
-                        <tr><td>Route</td><td>${props.route || 'N/A'}</td></tr>
-                        <tr><td>Operator</td><td>${props.operator || 'N/A'}</td></tr>
-                        <tr><td>Mon AM</td><td>${props.MONAM || 'N/A'}</td></tr>
-                        <tr><td>Mon PM</td><td>${props.MONPM || 'N/A'}</td></tr>
-                    </table>
-                `);
-            }
-        });
-        layerGroups.busLines.addLayer(busLinesLayer);
-
+        // Process bus lines in chunks
+        const chunkSize = 25;
+        const busFeatures = transformedBusLines.features;
+        
+        for (let i = 0; i < busFeatures.length; i += chunkSize) {
+            const chunk = busFeatures.slice(i, i + chunkSize);
+            const chunkGeoJSON = { type: 'FeatureCollection', features: chunk };
+            
+            const chunkLayer = L.geoJSON(chunkGeoJSON, {
+                style: {
+                    color: '#008000', // green
+                    weight: 2,
+                    opacity: 1
+                },
+                onEachFeature: function(feature, layer) {
+                    const props = feature.properties;
+                    layer.bindPopup(`
+                        <h4>Bus Route</h4>
+                        <table class="popup-table">
+                            <tr><th>Property</th><th>Value</th></tr>
+                            <tr><td>Route</td><td>${props.route || 'N/A'}</td></tr>
+                            <tr><td>Operator</td><td>${props.operator || 'N/A'}</td></tr>
+                            <tr><td>Mon AM</td><td>${props.MONAM || 'N/A'}</td></tr>
+                            <tr><td>Mon PM</td><td>${props.MONPM || 'N/A'}</td></tr>
+                        </table>
+                    `);
+                }
+            });
+            
+            layerGroups.busLines.addLayer(chunkLayer);
+            await new Promise(resolve => setTimeout(resolve, 5));
+        }
+        
+        console.log('Bus lines loaded');
+        
         // Load Bus Stops
         const busStopsResponse = await fetch('data/bus-stops.geojson');
         const busStopsData = await busStopsResponse.json();
         const transformedBusStops = transformGeoJSON(busStopsData);
         
-        const busStopsLayer = L.geoJSON(transformedBusStops, {
-            pointToLayer: function(feature, latlng) {
-                return L.circleMarker(latlng, {
-                    color: '#008000', // green
-                    fillColor: '#008000',
-                    fillOpacity: 1,
-                    radius: 4,
-                    weight: 1
-                });
-            },
-            onEachFeature: function(feature, layer) {
-                const props = feature.properties;
-                layer.bindPopup(`
-                    <h4>${props.CommonName || 'Bus Stop'}</h4>
-                    <table class="popup-table">
-                        <tr><th>Property</th><th>Value</th></tr>
-                        <tr><td>Stop Code</td><td>${props.ATCOCode || 'N/A'}</td></tr>
-                        <tr><td>Bearing</td><td>${props.Bearing || 'N/A'}</td></tr>
-                        <tr><td>Mon AM</td><td>${props.MONAM || 'N/A'}</td></tr>
-                        <tr><td>Mon PM</td><td>${props.MONPM || 'N/A'}</td></tr>
-                    </table>
-                `);
-            }
-        });
-        layerGroups.busStops.addLayer(busStopsLayer);
-
+        // Process bus stops in chunks
+        const stopFeatures = transformedBusStops.features;
+        
+        for (let i = 0; i < stopFeatures.length; i += chunkSize) {
+            const chunk = stopFeatures.slice(i, i + chunkSize);
+            const chunkGeoJSON = { type: 'FeatureCollection', features: chunk };
+            
+            const chunkLayer = L.geoJSON(chunkGeoJSON, {
+                pointToLayer: function(feature, latlng) {
+                    return L.circleMarker(latlng, {
+                        color: '#008000', // green
+                        fillColor: '#008000',
+                        fillOpacity: 1,
+                        radius: 4,
+                        weight: 1
+                    });
+                },
+                onEachFeature: function(feature, layer) {
+                    const props = feature.properties;
+                    layer.bindPopup(`
+                        <h4>${props.CommonName || 'Bus Stop'}</h4>
+                        <table class="popup-table">
+                            <tr><th>Property</th><th>Value</th></tr>
+                            <tr><td>Stop Code</td><td>${props.ATCOCode || 'N/A'}</td></tr>
+                            <tr><td>Bearing</td><td>${props.Bearing || 'N/A'}</td></tr>
+                            <tr><td>Mon AM</td><td>${props.MONAM || 'N/A'}</td></tr>
+                            <tr><td>Mon PM</td><td>${props.MONPM || 'N/A'}</td></tr>
+                        </table>
+                    `);
+                }
+            });
+            
+            layerGroups.busStops.addLayer(chunkLayer);
+            await new Promise(resolve => setTimeout(resolve, 5));
+        }
+        
+        hideLoadingIndicator();
+        console.log('Bus infrastructure loaded successfully');
     } catch (error) {
+        hideLoadingIndicator();
         console.error('Error loading bus infrastructure:', error);
     }
 }
@@ -1075,16 +1529,34 @@ async function loadTCRSchemesData() {
 }
 
 // Add loading indicator
-function showLoading() {
+function showLoadingIndicator(message = 'Loading map data...') {
+    // Remove any existing indicator
+    hideLoadingIndicator();
+    
     const mapElement = document.getElementById('map');
     const loadingDiv = document.createElement('div');
     loadingDiv.className = 'loading';
-    loadingDiv.innerHTML = 'Loading map data...';
+    loadingDiv.id = 'loading-indicator';
+    loadingDiv.innerHTML = message;
+    loadingDiv.style.cssText = `
+        position: absolute;
+        bottom: 20px;
+        left: 20px;
+        background: rgba(255, 255, 255, 0.95);
+        padding: 8px 12px;
+        border-radius: 4px;
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+        font-family: 'Trebuchet MS', sans-serif;
+        font-size: 0.9em;
+        z-index: 1500;
+        color: #333;
+        border-left: 3px solid #4CAF50;
+    `;
     mapElement.appendChild(loadingDiv);
 }
 
-function hideLoading() {
-    const loadingDiv = document.querySelector('.loading');
+function hideLoadingIndicator() {
+    const loadingDiv = document.getElementById('loading-indicator');
     if (loadingDiv) {
         loadingDiv.remove();
     }
