@@ -546,6 +546,7 @@ h4.legend-title {
 
 .palette-icon:hover {
     background-color: #f5f5f5;
+    color: #4CAF50;
 }
 
 .zoom-icon {
@@ -555,6 +556,7 @@ h4.legend-title {
 
 .zoom-icon:hover {
     background-color: #f5f5f5;
+    color: #007bff;
 }
 
 .filter-icon {
@@ -564,6 +566,7 @@ h4.legend-title {
 
 .filter-icon:hover {
     background-color: #f5f5f5;
+    color: #ff6b35;
 }
 
 /* Active Filters Display */
