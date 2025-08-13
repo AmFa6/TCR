@@ -1432,7 +1432,7 @@ async function loadRailStations() {
 async function loadPTALDataAsync() {
     try {
         console.log('Loading PTAL data...');
-        showLoadingIndicator('Loading PTAL data in background...');
+        showLoadingIndicator('Loading PTAL data...');
         
         const response = await fetch('./data/ptal.geojson');
         const data = await response.json();
@@ -1619,7 +1619,7 @@ async function loadBusStopsAsync() {
 async function loadBusInfrastructureAsync() {
     try {
         console.log('Loading bus infrastructure...');
-        showLoadingIndicator('Loading bus infrastructure in background...');
+        showLoadingIndicator('Loading bus infrastructure...');
         
         // Load Bus Lines first
         const busLinesResponse = await fetch('data/bus-lines.geojson');
@@ -1815,22 +1815,27 @@ function showLoadingIndicator(message = 'Loading map data...') {
     
     const mapElement = document.getElementById('map');
     const loadingDiv = document.createElement('div');
-    loadingDiv.className = 'loading';
+    loadingDiv.className = 'loading-indicator';
     loadingDiv.id = 'loading-indicator';
-    loadingDiv.innerHTML = message;
+    loadingDiv.innerHTML = `<i class="fas fa-spinner fa-spin" style="margin-right: 8px;"></i>${message}`;
     loadingDiv.style.cssText = `
         position: absolute;
-        bottom: 20px;
-        left: 20px;
+        bottom: 10px;
+        left: 10px;
         background: rgba(255, 255, 255, 0.95);
-        padding: 8px 12px;
-        border-radius: 4px;
-        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+        padding: 10px 15px;
+        border-radius: 6px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
         font-family: 'Trebuchet MS', sans-serif;
-        font-size: 0.9em;
+        font-size: 13px;
+        font-weight: 500;
         z-index: 1500;
         color: #333;
-        border-left: 3px solid #4CAF50;
+        border-left: 4px solid #4CAF50;
+        max-width: 250px;
+        word-wrap: break-word;
+        display: flex;
+        align-items: center;
     `;
     mapElement.appendChild(loadingDiv);
 }
