@@ -376,23 +376,56 @@ function populateFilterAttributes(layerName) {
     
     if (layerGroup) {
         const attributes = new Set();
+        let featureCount = 0;
+        
         layerGroup.eachLayer(layer => {
             if (layer.feature && layer.feature.properties) {
+                featureCount++;
                 Object.keys(layer.feature.properties).forEach(key => {
-                    if (layer.feature.properties[key] !== null && layer.feature.properties[key] !== undefined) {
+                    const value = layer.feature.properties[key];
+                    // Include attribute if it has a value (not null, undefined, or empty string)
+                    if (value !== null && value !== undefined && value !== '') {
                         attributes.add(key);
                     }
                 });
             }
         });
         
-        // Add attributes to dropdown
+        if (featureCount === 0) {
+            // If no features found, show a message
+            const option = document.createElement('option');
+            option.value = '';
+            option.textContent = 'No features loaded for this layer';
+            option.disabled = true;
+            filterAttribute.appendChild(option);
+            return;
+        }
+        
+        if (attributes.size === 0) {
+            // If no attributes found, show a message
+            const option = document.createElement('option');
+            option.value = '';
+            option.textContent = 'No filterable attributes found';
+            option.disabled = true;
+            filterAttribute.appendChild(option);
+            return;
+        }
+        
+        // Add attributes to dropdown, sorted alphabetically
         Array.from(attributes).sort().forEach(attr => {
             const option = document.createElement('option');
             option.value = attr;
-            option.textContent = attr;
+            // Clean up attribute name for display (replace underscores with spaces, capitalize)
+            option.textContent = attr.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
             filterAttribute.appendChild(option);
         });
+    } else {
+        // Layer group not found
+        const option = document.createElement('option');
+        option.value = '';
+        option.textContent = 'Layer not available';
+        option.disabled = true;
+        filterAttribute.appendChild(option);
     }
 }
 
