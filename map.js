@@ -199,7 +199,6 @@ function updateColorScheme(scheme) {
         console.log('Color scheme updated to:', scheme);
     }
 }
-}
 
 function toCamelCase(str) {
     return str.replace(/-([a-z])/g, function(match, letter) {
