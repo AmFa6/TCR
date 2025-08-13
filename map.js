@@ -339,10 +339,12 @@ function setupLegendControls() {
             
             // Show/hide PTAL individual controls
             if (layerId === 'ptal') {
-                const ptalControls = document.getElementById('ptal-individual-controls');
-                if (ptalControls) {
-                    ptalControls.style.display = this.checked ? 'block' : 'none';
-                }
+                // Main PTAL checkbox now acts as select/deselect all
+                const ptalCheckboxes = document.querySelectorAll('[id^="ptal-"]:not(#ptal)');
+                ptalCheckboxes.forEach(checkbox => {
+                    checkbox.checked = this.checked;
+                });
+                updatePTALLayer();
             }
         });
     });
@@ -588,30 +590,6 @@ function setupLayerIcons() {
 }
 
 function setupPTALControls() {
-    // Setup PTAL select/deselect all buttons
-    const selectAllBtn = document.getElementById('ptal-select-all');
-    const deselectAllBtn = document.getElementById('ptal-deselect-all');
-    
-    if (selectAllBtn) {
-        selectAllBtn.addEventListener('click', () => {
-            const ptalCheckboxes = document.querySelectorAll('[id^="ptal-"]:not(#ptal)');
-            ptalCheckboxes.forEach(checkbox => {
-                checkbox.checked = true;
-            });
-            updatePTALLayer();
-        });
-    }
-    
-    if (deselectAllBtn) {
-        deselectAllBtn.addEventListener('click', () => {
-            const ptalCheckboxes = document.querySelectorAll('[id^="ptal-"]:not(#ptal)');
-            ptalCheckboxes.forEach(checkbox => {
-                checkbox.checked = false;
-            });
-            updatePTALLayer();
-        });
-    }
-    
     // Setup individual PTAL checkbox handlers
     const ptalCheckboxes = document.querySelectorAll('[id^="ptal-"]:not(#ptal)');
     ptalCheckboxes.forEach(checkbox => {
