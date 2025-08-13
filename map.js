@@ -511,6 +511,10 @@ function setupFilterModal() {
     if (filterAttribute && filterControls) {
         filterAttribute.addEventListener('change', (e) => {
             filterControls.style.display = e.target.value ? 'block' : 'none';
+            // Populate value suggestions when attribute is selected
+            if (e.target.value) {
+                populateValueSuggestions(e.target.value);
+            }
         });
     }
     
@@ -795,6 +799,61 @@ function populateFilterAttributes(layerName) {
         option.textContent = 'Layer not available';
         option.disabled = true;
         filterAttribute.appendChild(option);
+    }
+}
+
+function populateValueSuggestions(attributeName) {
+    const filterModal = document.getElementById('filter-modal');
+    const datalist = document.getElementById('filter-value-suggestions');
+    
+    if (!filterModal || !datalist) {
+        console.warn('Filter modal or datalist not found');
+        return;
+    }
+    
+    const layerName = filterModal.getAttribute('data-current-layer');
+    const camelCaseId = toCamelCase(layerName);
+    const layerGroup = layerGroups[camelCaseId];
+    
+    // Clear existing suggestions
+    datalist.innerHTML = '';
+    
+    if (layerGroup) {
+        const uniqueValues = new Set();
+        
+        layerGroup.eachLayer(layer => {
+            // Function to recursively get all values for the attribute
+            function getAllValues(currentLayer) {
+                if (currentLayer.getLayers) {
+                    // This is a layer group, get all sub-layers
+                    currentLayer.getLayers().forEach(subLayer => getAllValues(subLayer));
+                } else if (currentLayer.feature && currentLayer.feature.properties) {
+                    // This is a feature layer with properties
+                    const value = currentLayer.feature.properties[attributeName];
+                    if (value !== null && value !== undefined && value !== '') {
+                        uniqueValues.add(value.toString());
+                    }
+                }
+            }
+            
+            getAllValues(layer);
+        });
+        
+        // Add unique values to datalist, sorted alphabetically
+        Array.from(uniqueValues).sort((a, b) => {
+            // Try to sort numerically if both are numbers
+            const aNum = parseFloat(a);
+            const bNum = parseFloat(b);
+            if (!isNaN(aNum) && !isNaN(bNum)) {
+                return aNum - bNum;
+            }
+            // Otherwise sort alphabetically
+            return a.localeCompare(b);
+        }).forEach(value => {
+            const option = document.createElement('option');
+            option.value = value;
+            datalist.appendChild(option);
+        });
     }
 }
 
@@ -1371,8 +1430,8 @@ async function loadPTALDataAsync() {
             
             layerGroups.ptal.addLayer(chunkLayer);
             
-            // Yield control back to the browser between chunks
-            await new Promise(resolve => setTimeout(resolve, 10));
+            // Yield control back to the browser between chunks using requestAnimationFrame
+            await new Promise(resolve => requestAnimationFrame(resolve));
             
             // Update progress
             const progress = Math.round(((i + chunkSize) / features.length) * 100);
@@ -1428,7 +1487,7 @@ async function loadBusInfrastructureAsync() {
             });
             
             layerGroups.busLines.addLayer(chunkLayer);
-            await new Promise(resolve => setTimeout(resolve, 5));
+            await new Promise(resolve => requestAnimationFrame(resolve));
         }
         
         console.log('Bus lines loaded');
@@ -1471,7 +1530,7 @@ async function loadBusInfrastructureAsync() {
             });
             
             layerGroups.busStops.addLayer(chunkLayer);
-            await new Promise(resolve => setTimeout(resolve, 5));
+            await new Promise(resolve => requestAnimationFrame(resolve));
         }
         
         hideLoadingIndicator();
