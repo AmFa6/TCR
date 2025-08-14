@@ -90,14 +90,8 @@ function isLayerVisible(groupName) {
     const checkboxId = groupName.replace(/([A-Z])/g, '-$1').toLowerCase();
     const checkbox = document.getElementById(checkboxId);
     
-    // Handle special cases for nested layers
-    if (groupName === 'busLines' || groupName === 'busStops' || groupName === 'railStations') {
-        // Check both the individual layer and the transport infrastructure parent
-        const individualCheckbox = document.getElementById(checkboxId);
-        const transportCheckbox = document.getElementById('transport-infrastructure');
-        return individualCheckbox && individualCheckbox.checked && 
-               transportCheckbox && transportCheckbox.checked;
-    }
+    // Handle special cases for nested layers - remove this since transport-infrastructure checkbox doesn't exist
+    // For rail stations, bus lines, and bus stops, just check their individual checkboxes
     
     // For PTAL subcategories, check individual PTAL checkboxes
     if (groupName.startsWith('ptal')) {
@@ -142,13 +136,16 @@ function findLayersAtPoint(latlng, point) {
 }
 
 function searchLayerGroup(layerGroup, latlng, point, groupName, foundLayers) {
+    console.log(`Searching in ${groupName} group with ${layerGroup.getLayers().length} layers`);
     layerGroup.eachLayer(layer => {
         if (layer instanceof L.LayerGroup) {
             // Recursively search nested layer groups
             searchLayerGroup(layer, latlng, point, groupName, foundLayers);
         } else if (layer.feature || layer instanceof L.Marker || layer instanceof L.CircleMarker) {
             // Check if this layer contains the click point
+            console.log(`  Checking layer type: ${layer.constructor.name}, has feature: ${!!layer.feature}`);
             if (isLayerAtPoint(layer, latlng, point)) {
+                console.log(`  ✓ Found matching layer in ${groupName}`);
                 // For layers without feature property, create a basic feature object
                 const feature = layer.feature || {
                     properties: {
@@ -163,6 +160,8 @@ function searchLayerGroup(layerGroup, latlng, point, groupName, foundLayers) {
                     groupName: groupName
                 });
             }
+        } else {
+            console.log(`  Skipping layer type: ${layer.constructor.name}`);
         }
     });
 }
