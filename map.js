@@ -170,7 +170,6 @@ function findLayersAtPoint(latlng, point) {
         // Debug logging
         const hasLayer = map.hasLayer(layerGroup);
         const isVisible = isLayerVisible(groupName);
-        console.log(`Layer ${groupName}: hasLayer=${hasLayer}, isVisible=${isVisible}, layerCount=${layerGroup.getLayers().length}`);
         
         // Only search layers that are currently visible on the map AND have their checkbox checked
         if (hasLayer && isVisible) {
@@ -179,21 +178,17 @@ function findLayersAtPoint(latlng, point) {
         }
     });
     
-    console.log(`Found ${foundLayers.length} layers at point:`, foundLayers.map(l => l.groupName));
     return foundLayers;
 }
 
 function searchLayerGroup(layerGroup, latlng, point, groupName, foundLayers) {
-    console.log(`Searching in ${groupName} group with ${layerGroup.getLayers().length} layers`);
     layerGroup.eachLayer(layer => {
         if (layer instanceof L.LayerGroup) {
             // Recursively search nested layer groups
             searchLayerGroup(layer, latlng, point, groupName, foundLayers);
         } else if (layer.feature || layer instanceof L.Marker || layer instanceof L.CircleMarker || layer instanceof L.Polygon || layer instanceof L.Polyline) {
             // Check if this layer contains the click point
-            console.log(`  Checking layer type: ${layer.constructor.name}, has feature: ${!!layer.feature}, geometry: ${layer.feature?.geometry?.type || 'N/A'}`);
             if (isLayerAtPoint(layer, latlng, point)) {
-                console.log(`  ✓ Found matching layer in ${groupName}`);
                 // For layers without feature property, create a basic feature object
                 const feature = layer.feature || {
                     properties: {
@@ -208,10 +203,8 @@ function searchLayerGroup(layerGroup, latlng, point, groupName, foundLayers) {
                     groupName: groupName
                 });
             } else {
-                console.log(`  ✗ Layer not at click point`);
             }
         } else {
-            console.log(`  Skipping layer type: ${layer.constructor.name}`);
         }
     });
 }
@@ -230,9 +223,7 @@ function isLayerAtPoint(layer, latlng, point) {
         
         // For polygon features
         if (layer instanceof L.Polygon) {
-            console.log(`    Checking polygon at point [${latlng.lat}, ${latlng.lng}]`);
             const result = isPointInPolygon(latlng, layer.getLatLngs());
-            console.log(`    Polygon contains point: ${result}`);
             return result;
         }
         
@@ -261,7 +252,6 @@ function isLayerAtPoint(layer, latlng, point) {
         }
         
     } catch (error) {
-        console.warn('Error checking if layer is at point:', error);
         return false;
     }
     
@@ -280,21 +270,12 @@ function isPointInPolygon(point, polygon) {
             // Direct coordinate array
             coords = polygon;
         } else {
-            console.warn('Unexpected polygon structure:', polygon);
             return false;
         }
     } else {
-        console.warn('Invalid polygon data:', polygon);
         return false;
     }
-    
-    if (!coords || coords.length < 3) {
-        console.warn('Polygon has insufficient coordinates:', coords);
-        return false;
-    }
-    
-    console.log(`      Point-in-polygon check: point=[${point.lat}, ${point.lng}], polygon has ${coords.length} coordinates`);
-    
+        
     let inside = false;
     for (let i = 0, j = coords.length - 1; i < coords.length; j = i++) {
         const xi = coords[i].lat || coords[i][1];
@@ -308,7 +289,6 @@ function isPointInPolygon(point, polygon) {
         }
     }
     
-    console.log(`      Result: inside = ${inside}`);
     return inside;
 }
 
@@ -375,7 +355,6 @@ function calculatePopupPosition(layer, clickedLatLng) {
         return [clickedLatLng.lat + 0.001, clickedLatLng.lng + 0.001];
         
     } catch (error) {
-        console.warn('Error calculating popup position:', error);
         return clickedLatLng;
     }
 }
@@ -493,7 +472,6 @@ function highlightCurrentFeature(layer, index) {
     removeHighlight();
     
     if (!layer) {
-        console.warn('No layer provided for highlighting');
         return;
     }
     
@@ -603,7 +581,6 @@ function highlightCurrentFeature(layer, index) {
         }
     }
     
-    console.log(`Highlighted feature ${index + 1} of type ${layer.constructor.name}`);
 }
 
 // Function to highlight a feature (legacy support)
@@ -664,7 +641,6 @@ function setupLegendControls() {
                     if (layerId === 'ptal') {
                         // Check if PTAL data is already loaded
                         if (layerGroups.ptal.getLayers().length === 0) {
-                            console.log('Loading PTAL data on-demand...');
                             loadPTALDataAsync().then(() => {
                                 // Add layer to map after loading
                                 map.addLayer(layerGroups.ptal);
@@ -677,7 +653,6 @@ function setupLegendControls() {
                     } else if (layerId === 'bus-lines') {
                         // Check if bus lines data is already loaded
                         if (layerGroups.busLines.getLayers().length === 0) {
-                            console.log('Loading bus lines data on-demand...');
                             loadBusLinesAsync().then(() => {
                                 map.addLayer(layerGroups.busLines);
                             });
@@ -687,7 +662,6 @@ function setupLegendControls() {
                     } else if (layerId === 'bus-stops') {
                         // Check if bus stops data is already loaded
                         if (layerGroups.busStops.getLayers().length === 0) {
-                            console.log('Loading bus stops data on-demand...');
                             loadBusStopsAsync().then(() => {
                                 map.addLayer(layerGroups.busStops);
                             });
@@ -734,7 +708,6 @@ function setupStylingModal() {
     const closeBtn = document.querySelector('.close');
     
     if (!modal || !closeBtn) {
-        console.warn('Styling modal elements not found, skipping setup');
         return;
     }
     
@@ -855,7 +828,6 @@ function updateColorScheme(scheme) {
     
     if (colorSchemes[scheme] && layerGroups.ptal) {
         // This would update the color scheme - implementation depends on specific requirements
-        console.log('Color scheme updated to:', scheme);
     }
 }
 
@@ -864,7 +836,6 @@ function setupFilterModal() {
     const filterCloseBtn = document.querySelector('.filter-close');
     
     if (!filterModal || !filterCloseBtn) {
-        console.warn('Filter modal elements not found, skipping setup');
         return;
     }
     
@@ -968,7 +939,6 @@ function setupLayerDragAndDrop() {
     // Get the legend content wrapper
     const legendContent = document.getElementById('legend-content-wrapper');
     if (!legendContent) {
-        console.warn('Legend content wrapper not found');
         return;
     }
     
@@ -1160,7 +1130,6 @@ function updatePTALLayer() {
 
 function zoomToLayer(layerName) {
     if (!layerName) {
-        console.warn('No layer name provided for zoom function');
         return;
     }
     
@@ -1186,10 +1155,8 @@ function zoomToLayer(layerName) {
             // Zoom to the layer with some padding
             map.fitBounds(bounds, { padding: [20, 20] });
         } else {
-            console.warn(`No valid bounds found for layer: ${layerName}`);
         }
     } else {
-        console.warn(`Layer not found or empty: ${layerName}`);
         // Fallback to default view if layer is not available
         map.setView([51.4545, -2.5879], 11);
     }
@@ -1200,7 +1167,6 @@ function openStylingModal(layerName) {
     const title = document.getElementById('modal-title');
     
     if (!modal) {
-        console.warn('Styling modal not found');
         return;
     }
     
@@ -1228,7 +1194,6 @@ function openFilterModal(layerName) {
     const filterAttribute = document.getElementById('filter-attribute');
     
     if (!filterModal) {
-        console.warn('Filter modal not found');
         return;
     }
     
@@ -1392,7 +1357,6 @@ function populateValueSuggestions(attributeName) {
     const datalist = document.getElementById('filter-value-suggestions');
     
     if (!filterModal || !datalist) {
-        console.warn('Filter modal or datalist not found');
         return;
     }
     
@@ -1445,7 +1409,6 @@ function populateValueSuggestions(attributeName) {
 function applyAttributeFilter() {
     const filterModal = document.getElementById('filter-modal');
     if (!filterModal) {
-        console.warn('Filter modal not found');
         return;
     }
     
@@ -1576,18 +1539,15 @@ function clearAllFilters() {
 function filterToVisibleExtent() {
     const bounds = map.getBounds();
     // Implementation for spatial filtering would go here
-    console.log('Filter to visible extent:', bounds);
 }
 
 function clearSpatialFilter() {
     // Implementation for clearing spatial filters would go here
-    console.log('Clear spatial filter');
 }
 
 function updateActiveFiltersDisplay() {
     const activeFiltersList = document.getElementById('active-filters-list');
     if (!activeFiltersList) {
-        console.warn('Active filters list element not found');
         return;
     }
     
@@ -1933,7 +1893,6 @@ async function loadSampleData() {
     ]);
     
     // Heavy layers (PTAL, Bus Lines, Bus Stops) will only load when user checks them on
-    console.log('Default layers loaded. PTAL and bus data will load only when requested.');
 }
 
 // Load Growth Zones data
@@ -1958,7 +1917,6 @@ async function loadGrowthZones() {
             }
         }).addTo(layerGroups.growthZones);
     } catch (error) {
-        console.error('Error loading growth zones:', error);
     }
 }
 
@@ -1997,7 +1955,6 @@ async function loadHousingData() {
             }
         }).addTo(layerGroups.housing);
     } catch (error) {
-        console.error('Error loading housing data:', error);
     }
 }
 
@@ -2040,7 +1997,6 @@ async function loadPTALData() {
             }
         }).addTo(layerGroups.ptal);
     } catch (error) {
-        console.error('Error loading PTAL data:', error);
     }
 }
 
@@ -2177,14 +2133,12 @@ async function loadRailStations() {
         layerGroups.railStations.addLayer(railStationsLayer);
 
     } catch (error) {
-        console.error('Error loading rail stations:', error);
     }
 }
 
 // Load PTAL data asynchronously in chunks to avoid freezing UI
 async function loadPTALDataAsync() {
     try {
-        console.log('Loading PTAL data...');
         showLoadingIndicator('Loading PTAL data...');
         
         const response = await fetch('./data/ptal.geojson');
@@ -2243,21 +2197,17 @@ async function loadPTALDataAsync() {
             
             // Update progress
             const progress = Math.round(((i + chunkSize) / features.length) * 100);
-            console.log(`PTAL loading progress: ${Math.min(progress, 100)}%`);
         }
         
         hideLoadingIndicator();
-        console.log('PTAL data loaded successfully');
     } catch (error) {
         hideLoadingIndicator();
-        console.error('Error loading PTAL data:', error);
     }
 }
 
 // Load bus lines data asynchronously on-demand
 async function loadBusLinesAsync() {
     try {
-        console.log('Loading bus lines...');
         showLoadingIndicator('Loading bus lines data...');
         
         const busLinesResponse = await fetch('data/bus-lines.geojson');
@@ -2288,17 +2238,14 @@ async function loadBusLinesAsync() {
         }
         
         hideLoadingIndicator();
-        console.log('Bus lines loaded successfully');
     } catch (error) {
         hideLoadingIndicator();
-        console.error('Error loading bus lines:', error);
     }
 }
 
 // Load bus stops data asynchronously on-demand
 async function loadBusStopsAsync() {
     try {
-        console.log('Loading bus stops...');
         showLoadingIndicator('Loading bus stops data...');
         
         const busStopsResponse = await fetch('data/bus-stops.geojson');
@@ -2333,17 +2280,14 @@ async function loadBusStopsAsync() {
         }
         
         hideLoadingIndicator();
-        console.log('Bus stops loaded successfully');
     } catch (error) {
         hideLoadingIndicator();
-        console.error('Error loading bus stops:', error);
     }
 }
 
 // Load bus infrastructure asynchronously in chunks
 async function loadBusInfrastructureAsync() {
     try {
-        console.log('Loading bus infrastructure...');
         showLoadingIndicator('Loading bus infrastructure...');
         
         // Load Bus Lines first
@@ -2373,9 +2317,7 @@ async function loadBusInfrastructureAsync() {
             layerGroups.busLines.addLayer(chunkLayer);
             await new Promise(resolve => requestAnimationFrame(resolve));
         }
-        
-        console.log('Bus lines loaded');
-        
+                
         // Load Bus Stops
         const busStopsResponse = await fetch('data/bus-stops.geojson');
         const busStopsData = await busStopsResponse.json();
@@ -2408,10 +2350,8 @@ async function loadBusInfrastructureAsync() {
         }
         
         hideLoadingIndicator();
-        console.log('Bus infrastructure loaded successfully');
     } catch (error) {
         hideLoadingIndicator();
-        console.error('Error loading bus infrastructure:', error);
     }
 }
 
@@ -2486,7 +2426,6 @@ async function loadTCRSchemesData() {
         layerGroups.tcrSchemes.addLayer(tcrPolygonsLayer);
 
     } catch (error) {
-        console.error('Error loading TCR schemes data:', error);
     }
 }
 
