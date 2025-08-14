@@ -1716,7 +1716,18 @@ function applyLayerFilters(layerName) {
     const layerGroup = layerGroups[camelCaseId];
     const layerFilterData = activeFilters[layerName] || { logic: 'AND', filters: [] };
     
-    if (!layerGroup) return;
+    console.log('=== Applying filters to layer:', layerName);
+    console.log('Layer filter data:', layerFilterData);
+    console.log('Layer group:', layerGroup);
+    
+    if (!layerGroup) {
+        console.log('No layer group found for:', layerName);
+        return;
+    }
+    
+    let totalFeatures = 0;
+    let visibleFeatures = 0;
+    let hiddenFeatures = 0;
     
     // Function to recursively apply all filters to layers
     function applyFiltersToLayer(currentLayer) {
@@ -1725,6 +1736,7 @@ function applyLayerFilters(layerName) {
             currentLayer.getLayers().forEach(subLayer => applyFiltersToLayer(subLayer));
         } else if (currentLayer.feature && currentLayer.feature.properties) {
             // This is a feature layer
+            totalFeatures++;
             let showFeature = true;
             
             if (layerFilterData.filters.length > 0) {
@@ -1745,24 +1757,30 @@ function applyLayerFilters(layerName) {
                     
                     const propValue = currentLayer.feature.properties[searchAttribute];
                     console.log('Property value for', searchAttribute, ':', propValue);
+                    console.log('Filter value:', filter.value1);
                     let passesFilter = false;
                     
                     switch (filter.operator) {
                         case 'equals':
                             passesFilter = propValue == filter.value1;
+                            console.log('Equals comparison result:', passesFilter);
                             break;
                         case 'contains':
                             passesFilter = propValue && propValue.toString().toLowerCase().includes(filter.value1.toLowerCase());
+                            console.log('Contains comparison result:', passesFilter);
                             break;
                         case 'greater':
                             passesFilter = parseFloat(propValue) > parseFloat(filter.value1);
+                            console.log('Greater comparison result:', passesFilter);
                             break;
                         case 'less':
                             passesFilter = parseFloat(propValue) < parseFloat(filter.value1);
+                            console.log('Less comparison result:', passesFilter);
                             break;
                         case 'between':
                             const num = parseFloat(propValue);
                             passesFilter = num >= parseFloat(filter.value1) && num <= parseFloat(filter.value2);
+                            console.log('Between comparison result:', passesFilter);
                             break;
                     }
                     
@@ -1777,14 +1795,18 @@ function applyLayerFilters(layerName) {
                     // ANY filter can pass (OR logic)
                     showFeature = filterResults.some(result => result === true);
                 }
+                
+                console.log('Filter results:', filterResults, 'Show feature:', showFeature);
             }
             
             // Show or hide the feature based on filter results
             if (showFeature) {
+                visibleFeatures++;
                 if (!map.hasLayer(currentLayer)) {
                     layerGroup.addLayer(currentLayer);
                 }
             } else {
+                hiddenFeatures++;
                 if (map.hasLayer(currentLayer)) {
                     layerGroup.removeLayer(currentLayer);
                 }
@@ -1794,6 +1816,8 @@ function applyLayerFilters(layerName) {
     
     // Apply filters to all layers in the group
     applyFiltersToLayer(layerGroup);
+    
+    console.log('Filter summary - Total:', totalFeatures, 'Visible:', visibleFeatures, 'Hidden:', hiddenFeatures);
 }
 
 function clearAllFilters() {
