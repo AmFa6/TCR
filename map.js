@@ -105,13 +105,14 @@ function setupMultiLayerPopups() {
     // Clean up highlights when popup is closed (but not during navigation)
     map.on('popupclose', function(e) {
         // Only clear state if we're not in the middle of navigation
-        // We can detect this by checking if we have a valid currentPopupIndex and layers
         console.log('popupclose event, currentPopupLayers.length:', currentPopupLayers.length, 'isNavigating:', isNavigating);
         if (!isNavigating) {
             removeHighlight();
             currentPopupLayers = [];
             currentPopupIndex = 0;
             activePopup = null;
+        } else {
+            console.log('Skipping cleanup during navigation');
         }
     });
 }
@@ -438,10 +439,12 @@ function showPopupAtIndex(index, latlng) {
     .setContent(popupContent)
     .openOn(map);
     
-    // Add event listener to remove highlight when popup is closed
-    activePopup.on('remove', function() {
-        removeHighlight();
-    });
+    // Add event listener to remove highlight when popup is closed (but not during navigation)
+    if (!isNavigating) {
+        activePopup.on('remove', function() {
+            removeHighlight();
+        });
+    }
     
     // Make popup draggable
     activePopup.on('add', function() {
@@ -2570,60 +2573,81 @@ function makePopupDraggable(popup) {
     
     let isDragging = false;
     let startX, startY, startLatLng;
+    let dragThreshold = 5; // Minimum pixel movement to start dragging
+    let hasMoved = false;
     
     // Add mousedown event listener
     wrapper.addEventListener('mousedown', function(e) {
         // Don't start dragging if clicking on buttons or interactive elements
-        if (e.target.tagName === 'BUTTON' || e.target.closest('button')) {
+        if (e.target.tagName === 'BUTTON' || e.target.closest('button') || 
+            e.target.classList.contains('leaflet-popup-close-button')) {
             return;
         }
         
-        isDragging = true;
         startX = e.clientX;
         startY = e.clientY;
         startLatLng = popup.getLatLng();
+        hasMoved = false;
         
-        // Prevent text selection while dragging
+        // Prevent text selection and default behavior
         e.preventDefault();
+        e.stopPropagation();
         
         // Add temporary event listeners for mousemove and mouseup
         document.addEventListener('mousemove', handleMouseMove);
         document.addEventListener('mouseup', handleMouseUp);
         
-        // Change cursor to grabbing
-        wrapper.style.cursor = 'grabbing';
+        // Prevent map interactions during potential drag
+        map.dragging.disable();
     });
     
     function handleMouseMove(e) {
-        if (!isDragging) return;
+        const deltaX = Math.abs(e.clientX - startX);
+        const deltaY = Math.abs(e.clientY - startY);
         
-        const deltaX = e.clientX - startX;
-        const deltaY = e.clientY - startY;
+        // Check if we've moved enough to start dragging
+        if (!isDragging && (deltaX > dragThreshold || deltaY > dragThreshold)) {
+            isDragging = true;
+            wrapper.style.cursor = 'grabbing';
+            hasMoved = true;
+        }
         
-        // Convert pixel movement to lat/lng movement
-        const mapBounds = map.getBounds();
-        const mapSize = map.getSize();
-        
-        const latDelta = (deltaY / mapSize.y) * (mapBounds.getNorth() - mapBounds.getSouth());
-        const lngDelta = (deltaX / mapSize.x) * (mapBounds.getEast() - mapBounds.getWest());
-        
-        const newLatLng = L.latLng(
-            startLatLng.lat - latDelta,
-            startLatLng.lng + lngDelta
-        );
-        
-        popup.setLatLng(newLatLng);
+        if (isDragging) {
+            const totalDeltaX = e.clientX - startX;
+            const totalDeltaY = e.clientY - startY;
+            
+            // Convert pixel movement to lat/lng movement
+            const mapBounds = map.getBounds();
+            const mapSize = map.getSize();
+            
+            const latDelta = (totalDeltaY / mapSize.y) * (mapBounds.getNorth() - mapBounds.getSouth());
+            const lngDelta = (totalDeltaX / mapSize.x) * (mapBounds.getEast() - mapBounds.getWest());
+            
+            const newLatLng = L.latLng(
+                startLatLng.lat - latDelta,
+                startLatLng.lng + lngDelta
+            );
+            
+            popup.setLatLng(newLatLng);
+        }
     }
     
-    function handleMouseUp() {
+    function handleMouseUp(e) {
+        // Remove temporary event listeners
+        document.removeEventListener('mousemove', handleMouseMove);
+        document.removeEventListener('mouseup', handleMouseUp);
+        
+        // Re-enable map dragging
+        map.dragging.enable();
+        
         if (isDragging) {
             isDragging = false;
-            
-            // Remove temporary event listeners
-            document.removeEventListener('mousemove', handleMouseMove);
-            document.removeEventListener('mouseup', handleMouseUp);
-            
-            // Reset cursor
+            wrapper.style.cursor = 'move';
+        }
+        
+        // If we haven't moved much, treat it as a click rather than a drag
+        if (!hasMoved) {
+            // Allow the click to propagate normally
             wrapper.style.cursor = 'move';
         }
     }
