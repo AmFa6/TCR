@@ -2027,7 +2027,8 @@ function getOriginalTCRAttributeName(renamedAttribute) {
         'Notes / Comments': 'JLTP5_in17',
         'Overview': 'JLTP5_in18',
         'Package Ref': 'JLTP5_in19',
-        '-': 'JLTP5_in20'
+        '-': 'JLTP5_in20',
+        'Growth Zone': 'Name'
     };
     
     return reverseAttributeMap[renamedAttribute] || renamedAttribute;
