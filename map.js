@@ -1906,7 +1906,20 @@ async function loadHousingData() {
         const transformedData = transformGeoJSON(data);
         const convertedData = convertMultiPolygonToPolygons(transformedData);
         
-        L.geoJSON(convertedData, {
+        // Filter properties to only keep Fid, Id and Layer fields
+        const filteredData = {
+            ...convertedData,
+            features: convertedData.features.map(feature => ({
+                ...feature,
+                properties: {
+                    Fid: feature.properties.Fid || feature.properties.fid || feature.properties.FID,
+                    Id: feature.properties.Id || feature.properties.id || feature.properties.ID,
+                    Layer: feature.properties.Layer || feature.properties.layer || feature.properties.LAYER
+                }
+            }))
+        };
+        
+        L.geoJSON(filteredData, {
             style: {
                 fillColor: 'transparent',
                 weight: 1,
