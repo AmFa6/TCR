@@ -364,6 +364,9 @@ function showPopupAtIndex(index, latlng) {
         return;
     }
     
+    // Update the current popup index to stay in sync
+    currentPopupIndex = index;
+    
     const layerInfo = currentPopupLayers[index];
     const feature = layerInfo.feature;
     const groupName = layerInfo.groupName;
