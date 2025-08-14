@@ -713,3 +713,224 @@ h4.legend-title {
     text-align: center;
     margin: 10px 0;
 }
+
+/* Advanced Layer Styling System */
+
+/* Styling Modal */
+.style-modal-content {
+    max-width: 600px;
+    max-height: 80vh;
+    overflow-y: auto;
+}
+
+.style-tabs {
+    display: flex;
+    margin-bottom: 20px;
+    border-bottom: 1px solid #ddd;
+}
+
+.tab-btn {
+    background: none;
+    border: none;
+    padding: 10px 20px;
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    transition: all 0.3s ease;
+}
+
+.tab-btn:hover {
+    background-color: #f5f5f5;
+}
+
+.tab-btn.active {
+    border-bottom-color: #007bff;
+    color: #007bff;
+    font-weight: bold;
+}
+
+.style-tab {
+    display: none;
+}
+
+.style-tab.active {
+    display: block;
+}
+
+.style-group {
+    margin-bottom: 20px;
+    padding: 15px;
+    border: 1px solid #e0e0e0;
+    border-radius: 5px;
+    background-color: #f9f9f9;
+}
+
+.style-group label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: bold;
+    color: #333;
+}
+
+.style-group select {
+    width: 100%;
+    padding: 8px;
+    margin-bottom: 10px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+}
+
+.graduated-controls {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 15px;
+    margin-top: 10px;
+}
+
+.graduated-controls > div {
+    display: flex;
+    flex-direction: column;
+}
+
+.graduated-controls label {
+    font-size: 12px;
+    margin-bottom: 5px;
+}
+
+.graduated-controls input {
+    padding: 6px;
+    border: 1px solid #ccc;
+    border-radius: 3px;
+}
+
+/* Style button in layer control */
+.style-btn {
+    background: none;
+    border: none;
+    font-size: 16px;
+    cursor: pointer;
+    margin-left: 5px;
+    padding: 2px 5px;
+    border-radius: 3px;
+    transition: background-color 0.2s;
+}
+
+.style-btn:hover {
+    background-color: rgba(0, 123, 255, 0.1);
+}
+
+/* Category controls */
+#fill-color-categories,
+#outline-color-categories,
+#general-color-categories {
+    margin-top: 10px;
+}
+
+.category-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 10px;
+    padding: 10px;
+    background-color: white;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+}
+
+.category-item input,
+.category-item select {
+    flex: 1;
+    padding: 5px;
+    border: 1px solid #ccc;
+    border-radius: 3px;
+}
+
+.category-item button {
+    background-color: #dc3545;
+    color: white;
+    border: none;
+    padding: 5px 10px;
+    border-radius: 3px;
+    cursor: pointer;
+}
+
+.category-item button:hover {
+    background-color: #c82333;
+}
+
+/* Range slider with display */
+input[type="range"] {
+    width: calc(100% - 50px);
+    margin-right: 10px;
+}
+
+input[type="range"] + span {
+    display: inline-block;
+    width: 40px;
+    text-align: center;
+    font-weight: bold;
+    color: #007bff;
+}
+
+/* Color input styling */
+input[type="color"] {
+    width: 50px;
+    height: 35px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+/* Number input styling */
+input[type="number"] {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+}
+
+/* Modal footer buttons */
+.modal-footer {
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+    margin-top: 20px;
+    padding-top: 15px;
+    border-top: 1px solid #e0e0e0;
+}
+
+.modal-footer button {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: bold;
+    transition: background-color 0.2s;
+}
+
+.modal-footer button:first-child {
+    background-color: #007bff;
+    color: white;
+}
+
+.modal-footer button:first-child:hover {
+    background-color: #0056b3;
+}
+
+.modal-footer button:nth-child(2) {
+    background-color: #6c757d;
+    color: white;
+}
+
+.modal-footer button:nth-child(2):hover {
+    background-color: #545b62;
+}
+
+.modal-footer button:last-child {
+    background-color: #f8f9fa;
+    color: #333;
+    border: 1px solid #ccc;
+}
+
+.modal-footer button:last-child:hover {
+    background-color: #e2e6ea;
+}
