@@ -294,6 +294,22 @@ h4.legend-title {
     color: #333;
 }
 
+/* Legend summary for complex styling */
+.legend-summary {
+    margin-top: 5px;
+    padding: 3px 6px;
+    background-color: #f8f9fa;
+    border-left: 3px solid #007bff;
+    font-size: 0.8em;
+    font-style: italic;
+    color: #555;
+    border-radius: 2px;
+}
+
+.legend-summary div {
+    margin: 2px 0;
+}
+
 /* Popup styling to match TAF */
 .taf-popup {
     font-family: 'Trebuchet MS', sans-serif;

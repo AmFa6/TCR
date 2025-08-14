@@ -78,11 +78,9 @@ function createStyleModal() {
             
             <!-- Fill Styling -->
             <div id="fill-tab" class="style-tab active">
-                <h4>Fill Styling</h4>
-                
                 <!-- Fill Color -->
                 <div class="style-group">
-                    <label>Fill Color:</label>
+                    <label>Color:</label>
                     <select id="fill-color-method">
                         <option value="simple">Simple</option>
                         <option value="categorized">Categorized</option>
@@ -93,7 +91,7 @@ function createStyleModal() {
                 
                 <!-- Fill Opacity -->
                 <div class="style-group">
-                    <label>Fill Opacity:</label>
+                    <label>Opacity:</label>
                     <select id="fill-opacity-method">
                         <option value="simple">Simple</option>
                         <option value="graduated">Graduated</option>
@@ -104,11 +102,9 @@ function createStyleModal() {
             
             <!-- Outline Styling -->
             <div id="outline-tab" class="style-tab">
-                <h4>Outline Styling</h4>
-                
                 <!-- Outline Color -->
                 <div class="style-group">
-                    <label>Outline Color:</label>
+                    <label>Color:</label>
                     <select id="outline-color-method">
                         <option value="simple">Simple</option>
                         <option value="categorized">Categorized</option>
@@ -119,7 +115,7 @@ function createStyleModal() {
                 
                 <!-- Outline Opacity -->
                 <div class="style-group">
-                    <label>Outline Opacity:</label>
+                    <label>Opacity:</label>
                     <select id="outline-opacity-method">
                         <option value="simple">Simple</option>
                         <option value="graduated">Graduated</option>
@@ -129,7 +125,7 @@ function createStyleModal() {
                 
                 <!-- Outline Weight -->
                 <div class="style-group">
-                    <label>Outline Weight:</label>
+                    <label>Weight:</label>
                     <select id="outline-weight-method">
                         <option value="simple">Simple</option>
                         <option value="graduated">Graduated</option>
@@ -140,8 +136,6 @@ function createStyleModal() {
             
             <!-- General Styling (for points and lines) -->
             <div id="general-tab" class="style-tab">
-                <h4>General Styling</h4>
-                
                 <!-- Color -->
                 <div class="style-group">
                     <label>Color:</label>
@@ -551,8 +545,18 @@ function applyStyle() {
     // Apply the style to the actual layer
     applyStyleToLayer(styleConfig);
     
-    // Close modal
+    // Create legend summary for complex styling methods
+    const geometryType = getLayerGeometryType(layerId);
+    const hasComplexStyling = checkForComplexStyling(styleConfig);
+    if (hasComplexStyling) {
+        createLegendSummary(styleConfig, geometryType);
+    }
+    
+    // Close modal immediately
     closeStyleModal();
+    
+    // Prevent any event bubbling that might trigger other modals
+    return false;
 }
 
 // Collect style configuration from modal inputs
@@ -689,6 +693,9 @@ function applyStyleToLayer(styleConfig) {
         }
         styleFeature(layer);
     });
+    
+    // Update the legend to reflect the new styling
+    updateLegendStyling(styleConfig);
 }
 
 // Calculate style for individual feature based on configuration
@@ -826,8 +833,44 @@ function resetStyle() {
     // Apply default style
     applyStyleToLayer(defaultStyle);
     
+    // Remove any legend summary
+    const summaryContainer = document.getElementById(`${layerId}-legend-summary`);
+    if (summaryContainer) {
+        summaryContainer.remove();
+    }
+    
+    // Reset legend color indicator to default
+    const legendColorDiv = findLegendColorIndicator(layerId);
+    if (legendColorDiv) {
+        resetLegendColorToDefault(legendColorDiv, geometryType);
+    }
+    
     // Reload modal with default values
     loadStyleToModal(defaultStyle, geometryType);
+}
+
+// Reset legend color indicator to default styling
+function resetLegendColorToDefault(colorDiv, geometryType) {
+    if (!colorDiv) return;
+    
+    // Reset to default styling based on geometry type
+    if (geometryType === 'polygon') {
+        colorDiv.style.backgroundColor = 'transparent';
+        colorDiv.style.border = '2px solid #000';
+        colorDiv.style.opacity = '1';
+        colorDiv.style.borderRadius = '';
+    } else if (geometryType === 'point') {
+        colorDiv.style.backgroundColor = '#3388ff';
+        colorDiv.style.border = '1px solid #000';
+        colorDiv.style.opacity = '1';
+        colorDiv.style.borderRadius = '50%';
+    } else if (geometryType === 'line') {
+        colorDiv.style.backgroundColor = 'transparent';
+        colorDiv.style.border = 'none';
+        colorDiv.style.borderTop = '2px solid #3388ff';
+        colorDiv.style.opacity = '1';
+        colorDiv.style.borderRadius = '';
+    }
 }
 
 // Add event listeners for method dropdowns
@@ -911,4 +954,199 @@ function formatLayerName(camelCaseId) {
 // Helper function to convert to camelCase (if not already defined in map.js)
 function toCamelCase(str) {
     return str.replace(/-([a-z])/g, function (g) { return g[1].toUpperCase(); });
+}
+
+// Check if the style configuration uses complex styling (categorized/graduated)
+function checkForComplexStyling(styleConfig) {
+    if (styleConfig.fill) {
+        if (styleConfig.fill.color.method !== 'simple' || 
+            styleConfig.fill.opacity.method !== 'simple') {
+            return true;
+        }
+    }
+    
+    if (styleConfig.outline) {
+        if (styleConfig.outline.color.method !== 'simple' || 
+            styleConfig.outline.opacity.method !== 'simple' || 
+            styleConfig.outline.weight.method !== 'simple') {
+            return true;
+        }
+    }
+    
+    if (styleConfig.general) {
+        if (styleConfig.general.color.method !== 'simple' || 
+            styleConfig.general.opacity.method !== 'simple' || 
+            styleConfig.general.size.method !== 'simple') {
+            return true;
+        }
+    }
+    
+    return false;
+}
+
+// Update legend styling to reflect applied styles
+function updateLegendStyling(styleConfig) {
+    const layerId = styleConfig.layerId;
+    const geometryType = styleConfig.geometryType;
+    
+    // Find the legend color indicator for this layer
+    const legendColorDiv = findLegendColorIndicator(layerId);
+    
+    if (!legendColorDiv) {
+        console.log('Legend color indicator not found for layer:', layerId);
+        return;
+    }
+    
+    // Update the legend based on styling method
+    updateLegendColorIndicator(legendColorDiv, styleConfig, geometryType);
+}
+
+// Find the color indicator div in the legend for a specific layer
+function findLegendColorIndicator(layerId) {
+    // For layers with simple checkbox structure (growth-zones, housing)
+    const checkbox = document.getElementById(layerId);
+    if (checkbox) {
+        const parent = checkbox.parentElement;
+        const colorDiv = parent.querySelector('div[style*="background-color"], div[style*="border"]');
+        return colorDiv;
+    }
+    
+    // For grouped layers like PTAL, look for the main layer control
+    const camelCaseId = toCamelCase(layerId);
+    const groupCheckbox = document.getElementById(camelCaseId);
+    if (groupCheckbox) {
+        const parent = groupCheckbox.parentElement;
+        const colorDiv = parent.querySelector('div[style*="background-color"], div[style*="border"]');
+        return colorDiv;
+    }
+    
+    return null;
+}
+
+// Update the legend color indicator based on the style configuration
+function updateLegendColorIndicator(colorDiv, styleConfig, geometryType) {
+    if (!colorDiv) return;
+    
+    let newColor = '#3388ff'; // default
+    let newOpacity = 1;
+    let borderColor = '#000';
+    let borderWidth = '1px';
+    
+    // Get the primary color and opacity from the style config
+    if (geometryType === 'polygon') {
+        if (styleConfig.fill && styleConfig.fill.color) {
+            newColor = getStyleValue(styleConfig.fill.color);
+        }
+        if (styleConfig.fill && styleConfig.fill.opacity) {
+            newOpacity = getStyleValue(styleConfig.fill.opacity);
+        }
+        if (styleConfig.outline && styleConfig.outline.color) {
+            borderColor = getStyleValue(styleConfig.outline.color);
+        }
+        if (styleConfig.outline && styleConfig.outline.weight) {
+            borderWidth = getStyleValue(styleConfig.outline.weight) + 'px';
+        }
+    } else {
+        // For points and lines, use general styling
+        if (styleConfig.general && styleConfig.general.color) {
+            newColor = getStyleValue(styleConfig.general.color);
+            borderColor = newColor; // Use same color for border
+        }
+        if (styleConfig.general && styleConfig.general.opacity) {
+            newOpacity = getStyleValue(styleConfig.general.opacity);
+        }
+        if (styleConfig.general && styleConfig.general.size) {
+            borderWidth = Math.max(1, getStyleValue(styleConfig.general.size)) + 'px';
+        }
+    }
+    
+    // Update the color div styling
+    if (geometryType === 'polygon') {
+        colorDiv.style.backgroundColor = newColor;
+        colorDiv.style.opacity = newOpacity;
+        colorDiv.style.border = `${borderWidth} solid ${borderColor}`;
+    } else if (geometryType === 'point') {
+        // For points, show as filled circle
+        colorDiv.style.backgroundColor = newColor;
+        colorDiv.style.opacity = newOpacity;
+        colorDiv.style.border = `${borderWidth} solid ${borderColor}`;
+        colorDiv.style.borderRadius = '50%';
+    } else if (geometryType === 'line') {
+        // For lines, show as line (using border)
+        colorDiv.style.backgroundColor = 'transparent';
+        colorDiv.style.border = 'none';
+        colorDiv.style.borderTop = `${borderWidth} solid ${newColor}`;
+        colorDiv.style.opacity = newOpacity;
+    }
+}
+
+// Get a simple style value from a style configuration (handles simple method primarily)
+function getStyleValue(styleConfig) {
+    if (styleConfig.method === 'simple') {
+        return styleConfig.value;
+    } else if (styleConfig.method === 'categorized') {
+        // For categorized, return the first category's color or a default
+        if (styleConfig.categories && styleConfig.categories.length > 0) {
+            return styleConfig.categories[0].style;
+        }
+        return styleConfig.defaultValue || '#3388ff';
+    } else if (styleConfig.method === 'graduated') {
+        // For graduated, return the start color or middle color
+        if (styleConfig.startColor) {
+            return styleConfig.startColor;
+        }
+        return styleConfig.min || styleConfig.defaultValue || '#3388ff';
+    }
+    
+    return styleConfig.value || styleConfig.defaultValue || '#3388ff';
+}
+
+// Create a legend summary for complex styling (categorized/graduated)
+function createLegendSummary(styleConfig, geometryType) {
+    const layerId = styleConfig.layerId;
+    
+    // Find or create a legend summary container
+    let summaryContainer = document.getElementById(`${layerId}-legend-summary`);
+    if (!summaryContainer) {
+        summaryContainer = document.createElement('div');
+        summaryContainer.id = `${layerId}-legend-summary`;
+        summaryContainer.className = 'legend-summary';
+        summaryContainer.style.cssText = 'margin-top: 5px; font-size: 0.8em; padding: 2px;';
+        
+        // Insert after the main layer control
+        const layerControl = findLayerControlElement(layerId);
+        if (layerControl && layerControl.parentElement) {
+            layerControl.parentElement.insertBefore(summaryContainer, layerControl.nextSibling);
+        }
+    }
+    
+    // Clear existing content
+    summaryContainer.innerHTML = '';
+    
+    // Create summary based on styling method
+    if (styleConfig.fill && styleConfig.fill.color.method === 'categorized') {
+        summaryContainer.innerHTML = '<div style="font-style: italic;">Categorized by ' + styleConfig.fill.color.attribute + '</div>';
+    } else if (styleConfig.fill && styleConfig.fill.color.method === 'graduated') {
+        summaryContainer.innerHTML = '<div style="font-style: italic;">Graduated by ' + styleConfig.fill.color.attribute + '</div>';
+    } else if (styleConfig.general && styleConfig.general.color.method === 'categorized') {
+        summaryContainer.innerHTML = '<div style="font-style: italic;">Categorized by ' + styleConfig.general.color.attribute + '</div>';
+    } else if (styleConfig.general && styleConfig.general.color.method === 'graduated') {
+        summaryContainer.innerHTML = '<div style="font-style: italic;">Graduated by ' + styleConfig.general.color.attribute + '</div>';
+    }
+}
+
+// Find the main layer control element for a layer
+function findLayerControlElement(layerId) {
+    const checkbox = document.getElementById(layerId);
+    if (checkbox) {
+        return checkbox.parentElement.parentElement; // Get the full control row
+    }
+    
+    const camelCaseId = toCamelCase(layerId);
+    const groupCheckbox = document.getElementById(camelCaseId);
+    if (groupCheckbox) {
+        return groupCheckbox.parentElement.parentElement;
+    }
+    
+    return null;
 }
