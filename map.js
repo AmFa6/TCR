@@ -549,7 +549,15 @@ function highlightCurrentFeature(layer, index) {
     console.log('Set highlightedLayer to:', layer?.constructor?.name);
     
     // Store original style comprehensively based on layer type
+    console.log('Checking layer type:', layer.constructor.name, 'instanceof checks:', {
+        CircleMarker: layer instanceof L.CircleMarker,
+        Marker: layer instanceof L.Marker,
+        Polygon: layer instanceof L.Polygon,
+        Polyline: layer instanceof L.Polyline
+    });
+    
     if (layer instanceof L.CircleMarker || layer instanceof L.Marker) {
+        console.log('Applying point/marker highlighting');
         originalStyle = {
             color: layer.options.color || '#3388ff',
             fillColor: layer.options.fillColor || '#3388ff',
@@ -568,8 +576,10 @@ function highlightCurrentFeature(layer, index) {
             fillOpacity: 0.9,
             radius: Math.max((originalStyle.radius || 5) + 3, 8)
         });
+        console.log('Point/marker highlighting applied');
         
     } else if (layer instanceof L.Polygon) {
+        console.log('Applying polygon highlighting');
         originalStyle = {
             color: layer.options.color || '#3388ff',
             fillColor: layer.options.fillColor || '#3388ff',
@@ -586,8 +596,10 @@ function highlightCurrentFeature(layer, index) {
             opacity: 1,
             fillOpacity: 0.4
         });
+        console.log('Polygon highlighting applied');
         
     } else if (layer instanceof L.Polyline) {
+        console.log('Applying polyline highlighting');
         originalStyle = {
             color: layer.options.color || '#3388ff',
             weight: layer.options.weight || 3,
@@ -602,8 +614,10 @@ function highlightCurrentFeature(layer, index) {
             opacity: 1,
             dashArray: null // Remove any dash pattern during highlight
         });
+        console.log('Polyline highlighting applied');
         
     } else {
+        console.log('Applying fallback highlighting for unknown layer type');
         // Fallback for other layer types
         originalStyle = {
             color: layer.options.color || '#3388ff',
@@ -631,7 +645,10 @@ function highlightCurrentFeature(layer, index) {
         }
         
         layer.setStyle(highlightStyle);
+        console.log('Fallback highlighting applied');
     }
+    
+    console.log('Highlighting complete for layer:', layer.constructor.name);
     
     // Bring the highlighted layer to front
     if (layer.bringToFront && typeof layer.bringToFront === 'function') {
@@ -660,11 +677,16 @@ function highlightFeature(layer) {
 
 // Function to remove highlight
 function removeHighlight() {
+    console.log('removeHighlight called, highlightedLayer:', !!highlightedLayer, 'originalStyle:', !!originalStyle);
     if (highlightedLayer && originalStyle) {
+        console.log('Restoring original style for layer:', highlightedLayer.constructor.name);
         // Restore original style
         highlightedLayer.setStyle(originalStyle);
         highlightedLayer = null;
         originalStyle = null;
+        console.log('Highlight removed successfully');
+    } else {
+        console.log('No highlighted layer or original style to restore');
     }
 }
 
