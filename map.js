@@ -195,8 +195,20 @@ function searchLayerGroup(layerGroup, latlng, point, groupName, foundLayers) {
             // Recursively search nested layer groups
             searchLayerGroup(layer, latlng, point, groupName, foundLayers);
         } else if (layer.feature || layer instanceof L.Marker || layer instanceof L.CircleMarker || layer instanceof L.Polygon || layer instanceof L.Polyline) {
-            // Check if this layer contains the click point
-            if (isLayerAtPoint(layer, latlng, point)) {
+            // Skip layers that are marked as filtered out
+            if (layer.options && layer.options.filteredOut) {
+                console.log('Skipping filtered out layer from popup');
+                return;
+            }
+            
+            // Skip layers that are hidden by filters (opacity 0 or invisible style)
+            const isLayerVisible = !layer.options || 
+                                 (layer.options.opacity !== 0 && 
+                                  layer.options.fillOpacity !== 0 && 
+                                  layer.options.weight !== 0);
+            
+            // Check if this layer contains the click point AND is currently visible
+            if (isLayerVisible && isLayerAtPoint(layer, latlng, point)) {
                 // For layers without feature property, create a basic feature object
                 const feature = layer.feature || {
                     properties: {
@@ -205,15 +217,21 @@ function searchLayerGroup(layerGroup, latlng, point, groupName, foundLayers) {
                     }
                 };
                 
-                // Check if this feature passes current filters for this layer
+                // Double-check if this feature passes current filters for this layer
                 if (passesActiveFilters(feature, groupName)) {
+                    console.log('Adding feature to popup list:', feature.properties);
                     foundLayers.push({
                         layer: layer,
                         feature: feature,
                         groupName: groupName
                     });
+                } else {
+                    console.log('Feature filtered out from popup:', feature.properties);
                 }
             } else {
+                if (!isLayerVisible) {
+                    console.log('Layer hidden by filter, skipping from popup');
+                }
             }
         } else {
         }
@@ -1808,33 +1826,48 @@ function applyLayerFilters(layerName) {
             // Show or hide the feature based on filter results
             if (showFeature) {
                 visibleFeatures++;
-                // Make sure the layer is visible
+                // Make sure the layer is visible - restore original style
                 if (currentLayer.setOpacity) {
                     currentLayer.setOpacity(1);
                 }
                 if (currentLayer.setStyle) {
-                    const originalStyle = currentLayer.options.originalStyle || currentLayer.options;
-                    currentLayer.setStyle(originalStyle);
+                    // Store original style if not already stored
+                    if (!currentLayer.options.originalStyle) {
+                        currentLayer.options.originalStyle = {
+                            opacity: currentLayer.options.opacity || 1,
+                            fillOpacity: currentLayer.options.fillOpacity || 0.7,
+                            weight: currentLayer.options.weight || 2,
+                            color: currentLayer.options.color,
+                            fillColor: currentLayer.options.fillColor
+                        };
+                    }
+                    currentLayer.setStyle(currentLayer.options.originalStyle);
                 }
+                // Mark as visible for click detection
+                currentLayer.options.filteredOut = false;
             } else {
                 hiddenFeatures++;
-                // Hide the layer by setting opacity to 0 or removing it
+                // Hide the layer completely by making it non-interactive and invisible
                 console.log('Hiding feature layer');
-                if (currentLayer.setOpacity) {
-                    currentLayer.setOpacity(0);
-                } else if (currentLayer.setStyle) {
-                    // For polygon/line layers, make them invisible
+                if (currentLayer.setStyle) {
+                    // For polygon/line layers, make them completely invisible and non-interactive
                     currentLayer.setStyle({
                         opacity: 0,
                         fillOpacity: 0,
-                        weight: 0
+                        weight: 0,
+                        interactive: false
                     });
-                } else {
-                    // Try to remove from parent layer
-                    const parentLayer = currentLayer._parentLayer || layerGroup;
-                    if (parentLayer && parentLayer.removeLayer) {
-                        parentLayer.removeLayer(currentLayer);
-                    }
+                } else if (currentLayer.setOpacity) {
+                    currentLayer.setOpacity(0);
+                }
+                // Mark as filtered out for click detection
+                currentLayer.options.filteredOut = true;
+                
+                // Also try to disable mouse events
+                if (currentLayer.off) {
+                    currentLayer.off('click');
+                    currentLayer.off('mouseover');
+                    currentLayer.off('mouseout');
                 }
             }
         }
@@ -1865,9 +1898,14 @@ function clearAllFilters() {
                     const originalStyle = currentLayer.options.originalStyle || {
                         opacity: 1,
                         fillOpacity: 0.7,
-                        weight: 2
+                        weight: 2,
+                        interactive: true
                     };
                     currentLayer.setStyle(originalStyle);
+                }
+                // Clear the filtered out flag
+                if (currentLayer.options) {
+                    currentLayer.options.filteredOut = false;
                 }
             }
         }
