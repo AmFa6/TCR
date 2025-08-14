@@ -341,16 +341,35 @@ function createDefaultStyleFromLayer(layerId, geometryType) {
                         
                         // Extract current styles
                         if (geometryType === 'polygon') {
-                            if (options.fillColor) defaultStyle.fill.color.value = options.fillColor;
-                            if (options.fillOpacity !== undefined) defaultStyle.fill.opacity.value = options.fillOpacity;
-                            if (options.color) defaultStyle.outline.color.value = options.color;
-                            if (options.opacity !== undefined) defaultStyle.outline.opacity.value = options.opacity;
-                            if (options.weight !== undefined) defaultStyle.outline.weight.value = options.weight;
+                            // Handle transparent fills properly
+                            if (options.fillColor !== undefined) {
+                                defaultStyle.fill.color.value = options.fillColor === 'transparent' ? 'transparent' : options.fillColor;
+                            }
+                            if (options.fillOpacity !== undefined) {
+                                defaultStyle.fill.opacity.value = options.fillOpacity;
+                            }
+                            if (options.color !== undefined) {
+                                defaultStyle.outline.color.value = options.color;
+                            }
+                            if (options.opacity !== undefined) {
+                                defaultStyle.outline.opacity.value = options.opacity;
+                            }
+                            if (options.weight !== undefined) {
+                                defaultStyle.outline.weight.value = options.weight;
+                            }
                         } else {
-                            if (options.color) defaultStyle.general.color.value = options.color;
-                            if (options.opacity !== undefined) defaultStyle.general.opacity.value = options.opacity;
-                            if (options.weight !== undefined) defaultStyle.general.size.value = options.weight;
-                            if (options.radius !== undefined) defaultStyle.general.size.value = options.radius;
+                            if (options.color !== undefined) {
+                                defaultStyle.general.color.value = options.color;
+                            }
+                            if (options.opacity !== undefined) {
+                                defaultStyle.general.opacity.value = options.opacity;
+                            }
+                            if (options.weight !== undefined) {
+                                defaultStyle.general.size.value = options.weight;
+                            }
+                            if (options.radius !== undefined) {
+                                defaultStyle.general.size.value = options.radius;
+                            }
                         }
                         return true; // Stop after first feature
                     }
@@ -419,39 +438,191 @@ function createSimpleControls(container, controlId, styleConfig) {
     const type = controlId.split('-')[1]; // color, opacity, size, weight
     
     if (type === 'color') {
+        // Handle transparent colors specially for fill
+        const isTransparent = styleConfig.value === 'transparent';
+        const colorValue = isTransparent ? '#ffffff' : (styleConfig.value || '#3388ff');
+        
         container.innerHTML = `
-            <input type="color" id="${controlId}-value" value="${styleConfig.value || '#3388ff'}">
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <input type="color" id="${controlId}-value" value="${colorValue}" ${isTransparent ? 'disabled' : ''}>
+                <label style="display: flex; align-items: center; gap: 5px;">
+                    <input type="checkbox" id="${controlId}-transparent" ${isTransparent ? 'checked' : ''}>
+                    Transparent
+                </label>
+            </div>
         `;
+        
+        // Add event listeners
+        const colorInput = container.querySelector(`#${controlId}-value`);
+        const transparentCheckbox = container.querySelector(`#${controlId}-transparent`);
+        
+        transparentCheckbox.addEventListener('change', function() {
+            colorInput.disabled = this.checked;
+            if (this.checked) {
+                colorInput.style.opacity = '0.5';
+            } else {
+                colorInput.style.opacity = '1';
+            }
+        });
+        
+        // Set initial state
+        if (isTransparent) {
+            colorInput.style.opacity = '0.5';
+        }
+        
     } else if (type === 'opacity') {
         container.innerHTML = `
-            <input type="range" id="${controlId}-value" min="0" max="1" step="0.1" value="${styleConfig.value || 1}">
-            <span id="${controlId}-display">${styleConfig.value || 1}</span>
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <input type="range" id="${controlId}-value" min="0" max="1" step="0.1" value="${styleConfig.value || 1}" style="flex: 1;">
+                <span id="${controlId}-display" style="min-width: 40px;">${Math.round((styleConfig.value || 1) * 100)}%</span>
+            </div>
         `;
         
         // Update display when slider changes
         const slider = container.querySelector(`#${controlId}-value`);
         const display = container.querySelector(`#${controlId}-display`);
         slider.addEventListener('input', () => {
-            display.textContent = slider.value;
+            display.textContent = Math.round(slider.value * 100) + '%';
         });
     } else { // size or weight
         container.innerHTML = `
-            <input type="number" id="${controlId}-value" min="1" max="20" value="${styleConfig.value || 2}">
+            <input type="number" id="${controlId}-value" min="1" max="20" value="${styleConfig.value || 2}" style="width: 80px;">
         `;
     }
 }
 
-// Create categorized style controls
-function createCategorizedControls(container, controlId, styleConfig) {
+
+
+// Create graduated style controls
+function createGraduatedControls(container, controlId, styleConfig) {
+    const type = controlId.split('-')[1];
+    
     container.innerHTML = `
-        <div>
+        <div style="margin-bottom: 10px;">
             <label>Attribute:</label>
-            <select id="${controlId}-attribute">
+            <select id="${controlId}-attribute" style="width: 100%; margin-top: 5px;">
                 <option value="">Select attribute...</option>
             </select>
         </div>
+        <div class="graduated-controls">
+            ${type === 'color' ? `
+                <div style="margin-bottom: 10px;">
+                    <label>Color Scheme:</label>
+                    <select id="${controlId}-color-scheme" style="width: 100%; margin-top: 5px;">
+                        <option value="custom">Custom Colors</option>
+                        <option value="viridis">Viridis</option>
+                        <option value="plasma">Plasma</option>
+                        <option value="blue-red">Blue to Red</option>
+                        <option value="green-yellow-red">Green-Yellow-Red</option>
+                        <option value="blues">Blues</option>
+                        <option value="reds">Reds</option>
+                        <option value="greens">Greens</option>
+                    </select>
+                </div>
+                <div id="${controlId}-custom-colors" style="display: flex; gap: 10px; margin-bottom: 10px;">
+                    <div>
+                        <label>Start Color:</label>
+                        <input type="color" id="${controlId}-start-color" value="${styleConfig.startColor || '#ffffcc'}">
+                    </div>
+                    <div>
+                        <label>End Color:</label>
+                        <input type="color" id="${controlId}-end-color" value="${styleConfig.endColor || '#800026'}">
+                    </div>
+                </div>
+            ` : `
+                <div style="display: flex; gap: 10px; margin-bottom: 10px;">
+                    <div>
+                        <label>Min Value:</label>
+                        <input type="number" id="${controlId}-min" value="${styleConfig.min || 0}" step="0.1">
+                    </div>
+                    <div>
+                        <label>Max Value:</label>
+                        <input type="number" id="${controlId}-max" value="${styleConfig.max || 10}" step="0.1">
+                    </div>
+                </div>
+            `}
+            <div>
+                <label>Classes:</label>
+                <input type="number" id="${controlId}-classes" min="2" max="10" value="${styleConfig.classes || 5}" style="width: 80px;">
+            </div>
+        </div>
+    `;
+    
+    // Add event listener for color scheme selection
+    if (type === 'color') {
+        const schemeSelect = container.querySelector(`#${controlId}-color-scheme`);
+        const customColors = container.querySelector(`#${controlId}-custom-colors`);
+        
+        schemeSelect.addEventListener('change', function() {
+            if (this.value === 'custom') {
+                customColors.style.display = 'flex';
+            } else {
+                customColors.style.display = 'none';
+                // Update colors based on selected scheme
+                updateColorsFromScheme(controlId, this.value);
+            }
+        });
+        
+        // Set initial scheme if specified
+        if (styleConfig.colorScheme) {
+            schemeSelect.value = styleConfig.colorScheme;
+            if (styleConfig.colorScheme !== 'custom') {
+                customColors.style.display = 'none';
+            }
+        }
+    }
+    
+    // Populate attributes after the container is updated
+    setTimeout(() => {
+        populateAttributeDropdown(`${controlId}-attribute`);
+        
+        // Set the attribute if it exists in styleConfig
+        if (styleConfig.attribute) {
+            const select = document.getElementById(`${controlId}-attribute`);
+            if (select) {
+                select.value = styleConfig.attribute;
+            }
+        }
+    }, 100);
+}
+
+// Update colors based on selected color scheme
+function updateColorsFromScheme(controlId, scheme) {
+    const colorSchemes = {
+        'viridis': { start: '#440154', end: '#fde725' },
+        'plasma': { start: '#0d0887', end: '#f0f921' },
+        'blue-red': { start: '#313695', end: '#a50026' },
+        'green-yellow-red': { start: '#006837', end: '#a50026' },
+        'blues': { start: '#f7fbff', end: '#08306b' },
+        'reds': { start: '#fff5f0', end: '#67000d' },
+        'greens': { start: '#f7fcf5', end: '#00441b' }
+    };
+    
+    const colors = colorSchemes[scheme];
+    if (colors) {
+        const startColorInput = document.getElementById(`${controlId}-start-color`);
+        const endColorInput = document.getElementById(`${controlId}-end-color`);
+        
+        if (startColorInput) startColorInput.value = colors.start;
+        if (endColorInput) endColorInput.value = colors.end;
+    }
+}
+
+// Enhanced categorized controls with random color generation
+function createCategorizedControls(container, controlId, styleConfig) {
+    container.innerHTML = `
+        <div style="margin-bottom: 10px;">
+            <label>Attribute:</label>
+            <select id="${controlId}-attribute" style="width: 100%; margin-top: 5px;">
+                <option value="">Select attribute...</option>
+            </select>
+        </div>
+        <div style="margin-bottom: 10px;">
+            <button type="button" onclick="generateRandomColors('${controlId}')" style="margin-right: 10px;">Generate Random Colors</button>
+            <button type="button" onclick="generateUniqueValues('${controlId}')" style="margin-right: 10px;">Add Unique Values</button>
+        </div>
         <div id="${controlId}-categories"></div>
-        <button onclick="addCategory('${controlId}')">Add Category</button>
+        <button type="button" onclick="addCategory('${controlId}')">Add Category</button>
     `;
     
     // Populate attributes after the container is updated
@@ -475,56 +646,83 @@ function createCategorizedControls(container, controlId, styleConfig) {
     }, 100);
 }
 
-// Create graduated style controls
-function createGraduatedControls(container, controlId, styleConfig) {
+// Generate random colors for existing categories
+function generateRandomColors(controlId) {
+    const categoriesDiv = document.getElementById(`${controlId}-categories`);
+    if (!categoriesDiv) return;
+    
+    const categoryItems = categoriesDiv.querySelectorAll('.category-item');
     const type = controlId.split('-')[1];
     
-    container.innerHTML = `
-        <div>
-            <label>Attribute:</label>
-            <select id="${controlId}-attribute">
-                <option value="">Select attribute...</option>
-            </select>
-        </div>
-        <div class="graduated-controls">
-            ${type === 'color' ? `
-                <div>
-                    <label>Start Color:</label>
-                    <input type="color" id="${controlId}-start-color" value="${styleConfig.startColor || '#ffffcc'}">
-                </div>
-                <div>
-                    <label>End Color:</label>
-                    <input type="color" id="${controlId}-end-color" value="${styleConfig.endColor || '#800026'}">
-                </div>
-            ` : `
-                <div>
-                    <label>Min Value:</label>
-                    <input type="number" id="${controlId}-min" value="${styleConfig.min || 0}" step="0.1">
-                </div>
-                <div>
-                    <label>Max Value:</label>
-                    <input type="number" id="${controlId}-max" value="${styleConfig.max || 10}" step="0.1">
-                </div>
-            `}
-            <div>
-                <label>Classes:</label>
-                <input type="number" id="${controlId}-classes" min="2" max="10" value="${styleConfig.classes || 5}">
-            </div>
-        </div>
-    `;
+    if (type === 'color') {
+        categoryItems.forEach(item => {
+            const styleInput = item.querySelector('.category-style');
+            if (styleInput && styleInput.type === 'color') {
+                styleInput.value = generateRandomColor();
+            }
+        });
+    }
+}
+
+// Generate unique values from the selected attribute
+function generateUniqueValues(controlId) {
+    const attributeSelect = document.getElementById(`${controlId}-attribute`);
+    if (!attributeSelect || !attributeSelect.value) {
+        alert('Please select an attribute first.');
+        return;
+    }
     
-    // Populate attributes after the container is updated
-    setTimeout(() => {
-        populateAttributeDropdown(`${controlId}-attribute`);
-        
-        // Set the attribute if it exists in styleConfig
-        if (styleConfig.attribute) {
-            const select = document.getElementById(`${controlId}-attribute`);
-            if (select) {
-                select.value = styleConfig.attribute;
+    const modal = document.getElementById('style-modal');
+    const layerId = modal.getAttribute('data-current-layer');
+    const camelCaseId = toCamelCase(layerId);
+    
+    if (typeof layerGroups === 'undefined') return;
+    
+    const layerGroup = layerGroups[camelCaseId];
+    if (!layerGroup) return;
+    
+    const uniqueValues = new Set();
+    const attribute = attributeSelect.value;
+    
+    // Collect unique values
+    layerGroup.eachLayer(layer => {
+        function collectValues(currentLayer) {
+            if (currentLayer.getLayers) {
+                currentLayer.getLayers().forEach(subLayer => collectValues(subLayer));
+            } else if (currentLayer.feature && currentLayer.feature.properties) {
+                const value = currentLayer.feature.properties[attribute];
+                if (value !== undefined && value !== null) {
+                    uniqueValues.add(String(value));
+                }
             }
         }
-    }, 100);
+        collectValues(layer);
+    });
+    
+    // Clear existing categories
+    const categoriesDiv = document.getElementById(`${controlId}-categories`);
+    if (categoriesDiv) {
+        categoriesDiv.innerHTML = '';
+    }
+    
+    // Add categories for each unique value
+    const type = controlId.split('-')[1];
+    Array.from(uniqueValues).sort().forEach(value => {
+        const style = type === 'color' ? generateRandomColor() : 
+                     type === 'opacity' ? Math.random().toFixed(1) :
+                     Math.floor(Math.random() * 10) + 1;
+        addCategory(controlId, value, style);
+    });
+}
+
+// Generate a random color
+function generateRandomColor() {
+    const colors = [
+        '#e41a1c', '#377eb8', '#4daf4a', '#984ea3', '#ff7f00', 
+        '#ffff33', '#a65628', '#f781bf', '#999999', '#66c2a5', 
+        '#fc8d62', '#8da0cb', '#e78ac3', '#a6d854', '#ffd92f'
+    ];
+    return colors[Math.floor(Math.random() * colors.length)];
 }
 
 // Populate attribute dropdown for current layer
@@ -672,7 +870,17 @@ function collectMethodConfig(controlId) {
     switch (method) {
         case 'simple':
             const valueInput = document.getElementById(`${controlId}-value`);
-            config.value = valueInput.type === 'color' ? valueInput.value : parseFloat(valueInput.value);
+            if (valueInput.type === 'color') {
+                // Check for transparent checkbox
+                const transparentCheckbox = document.getElementById(`${controlId}-transparent`);
+                if (transparentCheckbox && transparentCheckbox.checked) {
+                    config.value = 'transparent';
+                } else {
+                    config.value = valueInput.value;
+                }
+            } else {
+                config.value = parseFloat(valueInput.value);
+            }
             break;
             
         case 'categorized':
@@ -1200,21 +1408,25 @@ function findLegendColorIndicator(layerId) {
 function updateLegendColorIndicator(colorDiv, styleConfig, geometryType) {
     if (!colorDiv) return;
     
-    let newColor = '#3388ff'; // default
-    let newOpacity = 1;
+    let fillColor = '#3388ff'; // default
+    let fillOpacity = 0.7;
     let borderColor = '#000';
+    let borderOpacity = 1;
     let borderWidth = '1px';
     
     // Get the primary color and opacity from the style config
     if (geometryType === 'polygon') {
         if (styleConfig.fill && styleConfig.fill.color) {
-            newColor = getStyleValue(styleConfig.fill.color);
+            fillColor = getStyleValue(styleConfig.fill.color);
         }
         if (styleConfig.fill && styleConfig.fill.opacity) {
-            newOpacity = getStyleValue(styleConfig.fill.opacity);
+            fillOpacity = getStyleValue(styleConfig.fill.opacity);
         }
         if (styleConfig.outline && styleConfig.outline.color) {
             borderColor = getStyleValue(styleConfig.outline.color);
+        }
+        if (styleConfig.outline && styleConfig.outline.opacity) {
+            borderOpacity = getStyleValue(styleConfig.outline.opacity);
         }
         if (styleConfig.outline && styleConfig.outline.weight) {
             borderWidth = getStyleValue(styleConfig.outline.weight) + 'px';
@@ -1222,11 +1434,12 @@ function updateLegendColorIndicator(colorDiv, styleConfig, geometryType) {
     } else {
         // For points and lines, use general styling
         if (styleConfig.general && styleConfig.general.color) {
-            newColor = getStyleValue(styleConfig.general.color);
-            borderColor = newColor; // Use same color for border
+            fillColor = getStyleValue(styleConfig.general.color);
+            borderColor = fillColor; // Use same color for border
         }
         if (styleConfig.general && styleConfig.general.opacity) {
-            newOpacity = getStyleValue(styleConfig.general.opacity);
+            fillOpacity = getStyleValue(styleConfig.general.opacity);
+            borderOpacity = fillOpacity;
         }
         if (styleConfig.general && styleConfig.general.size) {
             borderWidth = Math.max(1, getStyleValue(styleConfig.general.size)) + 'px';
@@ -1235,21 +1448,59 @@ function updateLegendColorIndicator(colorDiv, styleConfig, geometryType) {
     
     // Update the color div styling
     if (geometryType === 'polygon') {
-        colorDiv.style.backgroundColor = newColor;
-        colorDiv.style.opacity = newOpacity;
-        colorDiv.style.border = `${borderWidth} solid ${borderColor}`;
+        // Handle transparent fills
+        if (fillColor === 'transparent') {
+            colorDiv.style.backgroundColor = 'transparent';
+        } else {
+            colorDiv.style.backgroundColor = fillColor;
+        }
+        
+        // Apply separate opacities using RGBA if needed
+        if (fillColor !== 'transparent' && fillOpacity < 1) {
+            const rgb = hexToRgb(fillColor);
+            if (rgb) {
+                colorDiv.style.backgroundColor = `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${fillOpacity})`;
+            }
+        }
+        
+        // Set border with its own opacity
+        const borderRgb = hexToRgb(borderColor);
+        if (borderRgb && borderOpacity < 1) {
+            colorDiv.style.border = `${borderWidth} solid rgba(${borderRgb.r}, ${borderRgb.g}, ${borderRgb.b}, ${borderOpacity})`;
+        } else {
+            colorDiv.style.border = `${borderWidth} solid ${borderColor}`;
+        }
+        
     } else if (geometryType === 'point') {
         // For points, show as filled circle
-        colorDiv.style.backgroundColor = newColor;
-        colorDiv.style.opacity = newOpacity;
-        colorDiv.style.border = `${borderWidth} solid ${borderColor}`;
+        if (fillOpacity < 1) {
+            const rgb = hexToRgb(fillColor);
+            if (rgb) {
+                colorDiv.style.backgroundColor = `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${fillOpacity})`;
+            }
+        } else {
+            colorDiv.style.backgroundColor = fillColor;
+        }
+        
+        const borderRgb = hexToRgb(borderColor);
+        if (borderRgb && borderOpacity < 1) {
+            colorDiv.style.border = `${borderWidth} solid rgba(${borderRgb.r}, ${borderRgb.g}, ${borderRgb.b}, ${borderOpacity})`;
+        } else {
+            colorDiv.style.border = `${borderWidth} solid ${borderColor}`;
+        }
         colorDiv.style.borderRadius = '50%';
+        
     } else if (geometryType === 'line') {
         // For lines, show as line (using border)
         colorDiv.style.backgroundColor = 'transparent';
         colorDiv.style.border = 'none';
-        colorDiv.style.borderTop = `${borderWidth} solid ${newColor}`;
-        colorDiv.style.opacity = newOpacity;
+        
+        const rgb = hexToRgb(fillColor);
+        if (rgb && fillOpacity < 1) {
+            colorDiv.style.borderTop = `${borderWidth} solid rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${fillOpacity})`;
+        } else {
+            colorDiv.style.borderTop = `${borderWidth} solid ${fillColor}`;
+        }
     }
 }
 

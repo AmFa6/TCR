@@ -1974,7 +1974,8 @@ function renameTCRAttributes(properties) {
         'JLTP5_in17': 'Notes / Comments',
         'JLTP5_in18': 'Overview',
         'JLTP5_in19': 'Package Ref',
-        'JLTP5_in20': '-' // Mapped to dash as requested
+        'JLTP5_in20': '-',
+        'Name': 'Growth Zone'
     };
     
     const renamedProperties = {};
