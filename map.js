@@ -50,6 +50,46 @@ function initializeMap() {
     setupMultiLayerPopups();
 }
 
+// Convert MultiPolygon features to individual Polygon features
+function convertMultiPolygonToPolygons(geoJson) {
+    const features = [];
+    const featureCounts = {};
+    
+    geoJson.features.forEach(feature => {
+        if (feature.geometry.type === 'MultiPolygon') {
+            // Count occurrences of each feature for unique naming
+            const baseId = feature.properties.id || feature.properties.ID || feature.properties.objectid || 'feature';
+            featureCounts[baseId] = (featureCounts[baseId] || 0) + 1;
+            
+            // Split MultiPolygon into individual Polygons
+            feature.geometry.coordinates.forEach((polygonCoords, index) => {
+                const newFeature = {
+                    type: 'Feature',
+                    properties: {
+                        ...feature.properties,
+                        // Add a suffix to distinguish split polygons
+                        originalId: baseId,
+                        polygonIndex: index
+                    },
+                    geometry: {
+                        type: 'Polygon',
+                        coordinates: polygonCoords
+                    }
+                };
+                features.push(newFeature);
+            });
+        } else {
+            // Keep non-MultiPolygon features as they are
+            features.push(feature);
+        }
+    });
+    
+    return {
+        type: 'FeatureCollection',
+        features: features
+    };
+}
+
 // Global variables for multi-layer popup system
 let currentPopupLayers = [];
 let currentPopupIndex = 0;
@@ -1838,8 +1878,9 @@ async function loadGrowthZones() {
         const response = await fetch('./data/growth-zones.geojson');
         const data = await response.json();
         const transformedData = transformGeoJSON(data);
+        const convertedData = convertMultiPolygonToPolygons(transformedData);
         
-        L.geoJSON(transformedData, {
+        L.geoJSON(convertedData, {
             style: {
                 fillColor: 'transparent', // transparent fill
                 weight: 2,
@@ -1863,8 +1904,9 @@ async function loadHousingData() {
         const response = await fetch('./data/housing.geojson');
         const data = await response.json();
         const transformedData = transformGeoJSON(data);
+        const convertedData = convertMultiPolygonToPolygons(transformedData);
         
-        L.geoJSON(transformedData, {
+        L.geoJSON(convertedData, {
             style: {
                 fillColor: 'transparent',
                 weight: 1,
@@ -1888,6 +1930,7 @@ async function loadPTALData() {
         const response = await fetch('./data/ptal.geojson');
         const data = await response.json();
         const transformedData = transformGeoJSON(data);
+        const convertedData = convertMultiPolygonToPolygons(transformedData);
         
         // Define PTAL categories and their colors
         const ptalCategories = {
@@ -1902,7 +1945,7 @@ async function loadPTALData() {
             '6b': '#99000d'
         };
         
-        L.geoJSON(transformedData, {
+        L.geoJSON(convertedData, {
             style: function(feature) {
                 const ptal = (feature.properties.PTAL || feature.properties.ptal || '').toString().toLowerCase();
                 const fillColor = ptalCategories[ptal] || '#b2df8a';
@@ -2070,6 +2113,7 @@ async function loadPTALDataAsync() {
         const response = await fetch('./data/ptal.geojson');
         const data = await response.json();
         const transformedData = transformGeoJSON(data);
+        const convertedData = convertMultiPolygonToPolygons(transformedData);
         
         // Define PTAL categories and their colors
         const ptalCategories = {
@@ -2086,7 +2130,7 @@ async function loadPTALDataAsync() {
         
         // Process features in chunks to avoid blocking the UI
         const chunkSize = 50; // Process 50 features at a time
-        const features = transformedData.features;
+        const features = convertedData.features;
         
         for (let i = 0; i < features.length; i += chunkSize) {
             const chunk = features.slice(i, i + chunkSize);
@@ -2347,8 +2391,9 @@ async function loadTCRSchemesData() {
         const tcrPolygonsResponse = await fetch('data/schemes_pg.geojson');
         const tcrPolygonsData = await tcrPolygonsResponse.json();
         const transformedTCRPolygons = transformGeoJSON(tcrPolygonsData);
+        const convertedTCRPolygons = convertMultiPolygonToPolygons(transformedTCRPolygons);
         
-        const tcrPolygonsLayer = L.geoJSON(transformedTCRPolygons, {
+        const tcrPolygonsLayer = L.geoJSON(convertedTCRPolygons, {
             style: {
                 color: '#ff00ff', // magenta
                 fillColor: 'transparent',
