@@ -29,6 +29,9 @@ function addStylingControls() {
 
 // Open styling modal for a specific layer
 function openStyleModal(layerId) {
+    // Close any existing modal first
+    closeStyleModal();
+    
     // Create modal if it doesn't exist
     let modal = document.getElementById('style-modal');
     if (!modal) {
@@ -43,9 +46,13 @@ function openStyleModal(layerId) {
     const layerName = formatLayerName(toCamelCase(layerId));
     document.getElementById('style-layer-title').textContent = `Style: ${layerName}`;
     
-    // Load existing style or create default
-    const currentStyle = layerStyles[layerId] || createDefaultStyle(layerId);
-    loadStyleToModal(currentStyle);
+    // Determine geometry type and show appropriate tabs
+    const geometryType = getLayerGeometryType(layerId);
+    setupTabsForGeometry(geometryType);
+    
+    // Load existing style or create default based on current layer styling
+    const currentStyle = layerStyles[layerId] || createDefaultStyleFromLayer(layerId, geometryType);
+    loadStyleToModal(currentStyle, geometryType);
     
     // Show modal
     modal.style.display = 'block';
@@ -189,10 +196,109 @@ function switchStyleTab(tabName) {
     document.querySelector(`[onclick="switchStyleTab('${tabName}')"]`).classList.add('active');
 }
 
-// Create default style configuration
-function createDefaultStyle(layerId) {
-    return {
+// Determine the geometry type of a layer
+function getLayerGeometryType(layerId) {
+    const camelCaseId = toCamelCase(layerId);
+    
+    // Check if layerGroups is available
+    if (typeof layerGroups === 'undefined') {
+        return 'unknown';
+    }
+    
+    const layerGroup = layerGroups[camelCaseId];
+    if (!layerGroup) return 'unknown';
+    
+    let geometryType = 'unknown';
+    
+    // Sample the first feature to determine geometry type
+    layerGroup.eachLayer(layer => {
+        function checkFeature(currentLayer) {
+            if (currentLayer.getLayers) {
+                currentLayer.getLayers().forEach(subLayer => checkFeature(subLayer));
+            } else if (currentLayer.feature && currentLayer.feature.geometry) {
+                const geomType = currentLayer.feature.geometry.type;
+                if (geomType === 'Polygon' || geomType === 'MultiPolygon') {
+                    geometryType = 'polygon';
+                } else if (geomType === 'Point' || geomType === 'MultiPoint') {
+                    geometryType = 'point';
+                } else if (geomType === 'LineString' || geomType === 'MultiLineString') {
+                    geometryType = 'line';
+                }
+                return true; // Stop after finding first feature
+            } else if (currentLayer instanceof L.Polygon) {
+                geometryType = 'polygon';
+                return true;
+            } else if (currentLayer instanceof L.Marker || currentLayer instanceof L.CircleMarker) {
+                geometryType = 'point';
+                return true;
+            } else if (currentLayer instanceof L.Polyline) {
+                geometryType = 'line';
+                return true;
+            }
+        }
+        
+        if (geometryType === 'unknown') {
+            checkFeature(layer);
+        }
+    });
+    
+    return geometryType;
+}
+
+// Setup tabs based on geometry type
+function setupTabsForGeometry(geometryType) {
+    const tabsContainer = document.querySelector('.style-tabs');
+    const fillTab = document.getElementById('fill-tab');
+    const outlineTab = document.getElementById('outline-tab');
+    const generalTab = document.getElementById('general-tab');
+    
+    // Hide all tabs first
+    fillTab.style.display = 'none';
+    outlineTab.style.display = 'none';
+    generalTab.style.display = 'none';
+    
+    // Clear existing tab buttons
+    tabsContainer.innerHTML = '';
+    
+    if (geometryType === 'polygon') {
+        // Show Fill and Outline tabs for polygons
+        fillTab.style.display = 'block';
+        outlineTab.style.display = 'block';
+        
+        tabsContainer.innerHTML = `
+            <button class="tab-btn active" onclick="switchStyleTab('fill')">Fill</button>
+            <button class="tab-btn" onclick="switchStyleTab('outline')">Outline</button>
+        `;
+        
+        // Show fill tab by default
+        fillTab.classList.add('active');
+        outlineTab.classList.remove('active');
+    } else {
+        // Show General tab for points and lines
+        generalTab.style.display = 'block';
+        
+        const tabLabel = geometryType === 'point' ? 'Point Style' : 
+                        geometryType === 'line' ? 'Line Style' : 'Style';
+        
+        tabsContainer.innerHTML = `
+            <button class="tab-btn active" onclick="switchStyleTab('general')">${tabLabel}</button>
+        `;
+        
+        // Show general tab by default
+        generalTab.classList.add('active');
+        fillTab.classList.remove('active');
+        outlineTab.classList.remove('active');
+    }
+}
+
+// Create default style from current layer styling
+function createDefaultStyleFromLayer(layerId, geometryType) {
+    const camelCaseId = toCamelCase(layerId);
+    
+    // Default fallback style
+    let defaultStyle = {
         layerId: layerId,
+        geometryType: geometryType,
         fill: {
             color: { method: 'simple', value: '#3388ff' },
             opacity: { method: 'simple', value: 0.7 }
@@ -208,29 +314,71 @@ function createDefaultStyle(layerId) {
             size: { method: 'simple', value: 8 }
         }
     };
+    
+    // Try to get current styling from first feature in the layer
+    if (typeof layerGroups !== 'undefined') {
+        const layerGroup = layerGroups[camelCaseId];
+        if (layerGroup) {
+            layerGroup.eachLayer(layer => {
+                function extractCurrentStyle(currentLayer) {
+                    if (currentLayer.getLayers) {
+                        currentLayer.getLayers().forEach(subLayer => extractCurrentStyle(subLayer));
+                    } else if (currentLayer.setStyle && currentLayer.options) {
+                        const options = currentLayer.options;
+                        
+                        // Extract current styles
+                        if (geometryType === 'polygon') {
+                            if (options.fillColor) defaultStyle.fill.color.value = options.fillColor;
+                            if (options.fillOpacity !== undefined) defaultStyle.fill.opacity.value = options.fillOpacity;
+                            if (options.color) defaultStyle.outline.color.value = options.color;
+                            if (options.opacity !== undefined) defaultStyle.outline.opacity.value = options.opacity;
+                            if (options.weight !== undefined) defaultStyle.outline.weight.value = options.weight;
+                        } else {
+                            if (options.color) defaultStyle.general.color.value = options.color;
+                            if (options.opacity !== undefined) defaultStyle.general.opacity.value = options.opacity;
+                            if (options.weight !== undefined) defaultStyle.general.size.value = options.weight;
+                            if (options.radius !== undefined) defaultStyle.general.size.value = options.radius;
+                        }
+                        return true; // Stop after first feature
+                    }
+                }
+                
+                extractCurrentStyle(layer);
+            });
+        }
+    }
+    
+    return defaultStyle;
 }
 
 // Load style configuration into modal
-function loadStyleToModal(style) {
-    // Set method dropdowns
-    document.getElementById('fill-color-method').value = style.fill.color.method;
-    document.getElementById('fill-opacity-method').value = style.fill.opacity.method;
-    document.getElementById('outline-color-method').value = style.outline.color.method;
-    document.getElementById('outline-opacity-method').value = style.outline.opacity.method;
-    document.getElementById('outline-weight-method').value = style.outline.weight.method;
-    document.getElementById('general-color-method').value = style.general.color.method;
-    document.getElementById('general-opacity-method').value = style.general.opacity.method;
-    document.getElementById('general-size-method').value = style.general.size.method;
-    
-    // Update control panels based on methods
-    updateStyleControls('fill-color', style.fill.color);
-    updateStyleControls('fill-opacity', style.fill.opacity);
-    updateStyleControls('outline-color', style.outline.color);
-    updateStyleControls('outline-opacity', style.outline.opacity);
-    updateStyleControls('outline-weight', style.outline.weight);
-    updateStyleControls('general-color', style.general.color);
-    updateStyleControls('general-opacity', style.general.opacity);
-    updateStyleControls('general-size', style.general.size);
+function loadStyleToModal(style, geometryType) {
+    // Set method dropdowns based on geometry type
+    if (geometryType === 'polygon') {
+        // Load fill and outline settings
+        document.getElementById('fill-color-method').value = style.fill.color.method;
+        document.getElementById('fill-opacity-method').value = style.fill.opacity.method;
+        document.getElementById('outline-color-method').value = style.outline.color.method;
+        document.getElementById('outline-opacity-method').value = style.outline.opacity.method;
+        document.getElementById('outline-weight-method').value = style.outline.weight.method;
+        
+        // Update control panels
+        updateStyleControls('fill-color', style.fill.color);
+        updateStyleControls('fill-opacity', style.fill.opacity);
+        updateStyleControls('outline-color', style.outline.color);
+        updateStyleControls('outline-opacity', style.outline.opacity);
+        updateStyleControls('outline-weight', style.outline.weight);
+    } else {
+        // Load general settings for points and lines
+        document.getElementById('general-color-method').value = style.general.color.method;
+        document.getElementById('general-opacity-method').value = style.general.opacity.method;
+        document.getElementById('general-size-method').value = style.general.size.method;
+        
+        // Update control panels
+        updateStyleControls('general-color', style.general.color);
+        updateStyleControls('general-opacity', style.general.opacity);
+        updateStyleControls('general-size', style.general.size);
+    }
 }
 
 // Update style controls based on selected method
@@ -401,7 +549,7 @@ function applyStyle() {
     layerStyles[layerId] = styleConfig;
     
     // Apply the style to the actual layer
-    applyStyleToLayer(layerId, styleConfig);
+    applyStyleToLayer(styleConfig);
     
     // Close modal
     closeStyleModal();
@@ -409,8 +557,18 @@ function applyStyle() {
 
 // Collect style configuration from modal inputs
 function collectStyleFromModal() {
-    return {
-        fill: {
+    const modal = document.getElementById('style-modal');
+    const layerId = modal.getAttribute('data-current-layer');
+    const geometryType = getLayerGeometryType(layerId);
+    
+    const styleConfig = {
+        layerId: layerId,
+        geometryType: geometryType
+    };
+    
+    if (geometryType === 'polygon') {
+        // Collect fill and outline settings
+        styleConfig.fill = {
             color: {
                 method: document.getElementById('fill-color-method').value,
                 ...collectMethodConfig('fill-color')
@@ -419,8 +577,9 @@ function collectStyleFromModal() {
                 method: document.getElementById('fill-opacity-method').value,
                 ...collectMethodConfig('fill-opacity')
             }
-        },
-        outline: {
+        };
+        
+        styleConfig.outline = {
             color: {
                 method: document.getElementById('outline-color-method').value,
                 ...collectMethodConfig('outline-color')
@@ -433,8 +592,10 @@ function collectStyleFromModal() {
                 method: document.getElementById('outline-weight-method').value,
                 ...collectMethodConfig('outline-weight')
             }
-        },
-        general: {
+        };
+    } else {
+        // Collect general settings for points and lines
+        styleConfig.general = {
             color: {
                 method: document.getElementById('general-color-method').value,
                 ...collectMethodConfig('general-color')
@@ -447,8 +608,10 @@ function collectStyleFromModal() {
                 method: document.getElementById('general-size-method').value,
                 ...collectMethodConfig('general-size')
             }
-        }
-    };
+        };
+    }
+    
+    return styleConfig;
 }
 
 // Collect configuration for a specific styling method
@@ -486,7 +649,8 @@ function collectMethodConfig(controlId) {
 }
 
 // Apply style configuration to actual layer
-function applyStyleToLayer(layerId, styleConfig) {
+function applyStyleToLayer(styleConfig) {
+    const layerId = styleConfig.layerId;
     const camelCaseId = toCamelCase(layerId);
     
     // Check if layerGroups is available (from map.js)
@@ -531,25 +695,44 @@ function applyStyleToLayer(layerId, styleConfig) {
 function calculateFeatureStyle(feature, styleConfig) {
     const style = {};
     
-    // Determine geometry type and apply appropriate styling
-    const geomType = feature.geometry ? feature.geometry.type : 'Unknown';
-    
-    if (geomType === 'Polygon' || geomType === 'MultiPolygon') {
+    if (styleConfig.geometryType === 'polygon') {
         // Apply fill and outline styling
-        style.fillColor = calculateStyleValue(feature, styleConfig.fill.color);
-        style.fillOpacity = calculateStyleValue(feature, styleConfig.fill.opacity);
-        style.color = calculateStyleValue(feature, styleConfig.outline.color);
-        style.opacity = calculateStyleValue(feature, styleConfig.outline.opacity);
-        style.weight = calculateStyleValue(feature, styleConfig.outline.weight);
+        if (styleConfig.fill) {
+            if (styleConfig.fill.color) {
+                style.fillColor = calculateStyleValue(feature, styleConfig.fill.color);
+            }
+            if (styleConfig.fill.opacity) {
+                style.fillOpacity = calculateStyleValue(feature, styleConfig.fill.opacity);
+            }
+        }
+        
+        if (styleConfig.outline) {
+            if (styleConfig.outline.color) {
+                style.color = calculateStyleValue(feature, styleConfig.outline.color);
+            }
+            if (styleConfig.outline.opacity) {
+                style.opacity = calculateStyleValue(feature, styleConfig.outline.opacity);
+            }
+            if (styleConfig.outline.weight) {
+                style.weight = calculateStyleValue(feature, styleConfig.outline.weight);
+            }
+        }
     } else {
         // Apply general styling for points and lines
-        style.color = calculateStyleValue(feature, styleConfig.general.color);
-        style.opacity = calculateStyleValue(feature, styleConfig.general.opacity);
-        
-        if (geomType === 'Point') {
-            style.radius = calculateStyleValue(feature, styleConfig.general.size);
-        } else if (geomType === 'LineString' || geomType === 'MultiLineString') {
-            style.weight = calculateStyleValue(feature, styleConfig.general.size);
+        if (styleConfig.general) {
+            if (styleConfig.general.color) {
+                style.color = calculateStyleValue(feature, styleConfig.general.color);
+            }
+            if (styleConfig.general.opacity) {
+                style.opacity = calculateStyleValue(feature, styleConfig.general.opacity);
+            }
+            if (styleConfig.general.size) {
+                if (styleConfig.geometryType === 'point') {
+                    style.radius = calculateStyleValue(feature, styleConfig.general.size);
+                } else {
+                    style.weight = calculateStyleValue(feature, styleConfig.general.size);
+                }
+            }
         }
     }
     
@@ -636,12 +819,15 @@ function resetStyle() {
     // Remove stored style
     delete layerStyles[layerId];
     
+    // Get geometry type and create default style from current layer
+    const geometryType = getLayerGeometryType(layerId);
+    const defaultStyle = createDefaultStyleFromLayer(layerId, geometryType);
+    
     // Apply default style
-    const defaultStyle = createDefaultStyle(layerId);
-    applyStyleToLayer(layerId, defaultStyle);
+    applyStyleToLayer(defaultStyle);
     
     // Reload modal with default values
-    loadStyleToModal(defaultStyle);
+    loadStyleToModal(defaultStyle, geometryType);
 }
 
 // Add event listeners for method dropdowns
