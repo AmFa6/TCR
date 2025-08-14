@@ -205,11 +205,14 @@ function searchLayerGroup(layerGroup, latlng, point, groupName, foundLayers) {
                     }
                 };
                 
-                foundLayers.push({
-                    layer: layer,
-                    feature: feature,
-                    groupName: groupName
-                });
+                // Check if this feature passes current filters for this layer
+                if (passesActiveFilters(feature, groupName)) {
+                    foundLayers.push({
+                        layer: layer,
+                        feature: feature,
+                        groupName: groupName
+                    });
+                }
             } else {
             }
         } else {
@@ -367,6 +370,69 @@ function calculatePopupPosition(layer, clickedLatLng) {
     }
 }
 
+function passesActiveFilters(feature, groupName) {
+    // Get the layer name that matches the activeFilters structure
+    const layerName = getLayerDisplayName(groupName);
+    const layerFilterData = activeFilters[layerName];
+    
+    // If no filters are active for this layer, show the feature
+    if (!layerFilterData || !layerFilterData.filters || layerFilterData.filters.length === 0) {
+        return true;
+    }
+    
+    const properties = feature.properties || {};
+    const camelCaseId = toCamelCase(layerName);
+    const filterResults = [];
+    
+    // Check each filter
+    for (const filter of layerFilterData.filters) {
+        let searchAttribute = filter.attribute;
+        
+        console.log('Popup filter check - Processing filter:', filter);
+        console.log('Popup filter check - Original attribute:', searchAttribute);
+        
+        // Handle TCR attribute mapping
+        if (camelCaseId === 'tcrSchemes') {
+            searchAttribute = getOriginalTCRAttributeName(filter.attribute);
+            console.log('Popup filter check - Mapped TCR attribute from', filter.attribute, 'to', searchAttribute);
+        }
+        
+        const propValue = properties[searchAttribute];
+        console.log('Popup filter check - Property value for', searchAttribute, ':', propValue);
+        let passesFilter = false;
+        
+        switch (filter.operator) {
+            case 'equals':
+                passesFilter = propValue == filter.value1;
+                break;
+            case 'contains':
+                passesFilter = propValue && propValue.toString().toLowerCase().includes(filter.value1.toLowerCase());
+                break;
+            case 'greater':
+                passesFilter = parseFloat(propValue) > parseFloat(filter.value1);
+                break;
+            case 'less':
+                passesFilter = parseFloat(propValue) < parseFloat(filter.value1);
+                break;
+            case 'between':
+                const num = parseFloat(propValue);
+                passesFilter = num >= parseFloat(filter.value1) && num <= parseFloat(filter.value2);
+                break;
+        }
+        
+        filterResults.push(passesFilter);
+    }
+    
+    // Apply AND/OR logic
+    if (layerFilterData.logic === 'AND') {
+        // ALL filters must pass
+        return filterResults.every(result => result === true);
+    } else {
+        // ANY filter can pass (OR logic)
+        return filterResults.some(result => result === true);
+    }
+}
+
 function showPopupAtIndex(index, latlng) {
     console.log('showPopupAtIndex called with index:', index, 'total layers:', currentPopupLayers.length);
     
@@ -442,10 +508,10 @@ function showPopupAtIndex(index, latlng) {
     
     // No individual popup remove listener - handle all cleanup through global popupclose event
     
-    // Make popup draggable
-    activePopup.on('add', function() {
+    // Make popup draggable - use a small timeout to ensure DOM is ready
+    setTimeout(() => {
         makePopupDraggable(activePopup);
-    });
+    }, 10);
 }
 
 function formatLayerName(groupName) {
@@ -459,6 +525,12 @@ function formatLayerName(groupName) {
         'tcrSchemes': 'TCR Schemes'
     };
     return nameMap[groupName] || groupName;
+}
+
+function getLayerDisplayName(groupName) {
+    // This function converts groupName (camelCase) to the display name used in activeFilters
+    // which corresponds to what's shown in the filter modal
+    return formatLayerName(groupName);
 }
 
 function formatPropertyName(key) {
@@ -961,10 +1033,16 @@ function setupFilterModal() {
     }
     
     // Filter buttons
-    const applyFilterBtn = document.getElementById('apply-filter');
-    if (applyFilterBtn) {
-        applyFilterBtn.addEventListener('click', () => {
-            applyAttributeFilter();
+    const addFilterBtn = document.getElementById('add-filter');
+    const applyFiltersBtn = document.getElementById('apply-filters');
+    if (addFilterBtn) {
+        addFilterBtn.addEventListener('click', () => {
+            addFilterToList();
+        });
+    }
+    if (applyFiltersBtn) {
+        applyFiltersBtn.addEventListener('click', () => {
+            applyAllFilters();
         });
     }
     
@@ -972,7 +1050,8 @@ function setupFilterModal() {
     if (clearAllFiltersBtn) {
         clearAllFiltersBtn.addEventListener('click', () => {
             clearAllFilters();
-            filterModal.style.display = 'none';
+            updateActiveFiltersDisplay();
+            // Don't close the modal - let user continue adding filters
         });
     }
     
@@ -1510,6 +1589,80 @@ function populateValueSuggestions(attributeName) {
     }
 }
 
+function addFilterToList() {
+    const filterModal = document.getElementById('filter-modal');
+    if (!filterModal) {
+        return;
+    }
+    
+    const layerName = filterModal.getAttribute('data-current-layer');
+    const attribute = document.getElementById('filter-attribute')?.value;
+    const operator = document.getElementById('filter-operator')?.value;
+    const value1 = document.getElementById('filter-value')?.value;
+    const value2 = document.getElementById('filter-value2')?.value;
+    
+    if (!attribute || !value1) {
+        alert('Please select an attribute and enter a value');
+        return;
+    }
+    
+    // Store the filter for this specific layer
+    if (!activeFilters[layerName]) {
+        activeFilters[layerName] = {
+            logic: 'AND',
+            filters: []
+        };
+    }
+    
+    // Get current logic setting
+    const filterLogic = document.getElementById('filter-logic')?.value || 'AND';
+    activeFilters[layerName].logic = filterLogic;
+    
+    // Add new filter to the list
+    const newFilter = {
+        id: Date.now(), // Unique ID for this filter
+        attribute: attribute,
+        operator: operator,
+        value1: value1,
+        value2: value2
+    };
+    
+    console.log('Adding filter:', newFilter);
+    console.log('Layer name:', layerName);
+    console.log('Camel case:', toCamelCase(layerName));
+    
+    activeFilters[layerName].filters.push(newFilter);
+    
+    // Update active filters display
+    updateActiveFiltersDisplay();
+    
+    // Clear the form for next filter
+    clearFilterForm();
+}
+
+function applyAllFilters() {
+    const filterModal = document.getElementById('filter-modal');
+    if (!filterModal) {
+        return;
+    }
+    
+    const layerName = filterModal.getAttribute('data-current-layer');
+    
+    // Apply all filters for this layer
+    applyLayerFilters(layerName);
+    
+    // Don't close the modal - let user continue adding filters
+    alert('Filters applied successfully!');
+}
+
+function clearFilterForm() {
+    document.getElementById('filter-attribute').value = '';
+    document.getElementById('filter-value').value = '';
+    document.getElementById('filter-value2').value = '';
+    document.getElementById('filter-controls').style.display = 'none';
+    document.getElementById('filter-value2-group').style.display = 'none';
+}
+
 function applyAttributeFilter() {
     const filterModal = document.getElementById('filter-modal');
     if (!filterModal) {
@@ -1561,7 +1714,7 @@ function applyAttributeFilter() {
 function applyLayerFilters(layerName) {
     const camelCaseId = toCamelCase(layerName);
     const layerGroup = layerGroups[camelCaseId];
-    const layerFilters = activeFilters[layerName] || [];
+    const layerFilterData = activeFilters[layerName] || { logic: 'AND', filters: [] };
     
     if (!layerGroup) return;
     
@@ -1574,49 +1727,72 @@ function applyLayerFilters(layerName) {
             // This is a feature layer
             let showFeature = true;
             
-            // Check against all active filters for this layer
-            for (const filter of layerFilters) {
-                const propValue = currentLayer.feature.properties[filter.attribute];
-                let passesFilter = false;
+            if (layerFilterData.filters.length > 0) {
+                const filterResults = [];
                 
-                switch (filter.operator) {
-                    case 'equals':
-                        passesFilter = propValue == filter.value1;
-                        break;
-                    case 'contains':
-                        passesFilter = propValue && propValue.toString().toLowerCase().includes(filter.value1.toLowerCase());
-                        break;
-                    case 'greater':
-                        passesFilter = parseFloat(propValue) > parseFloat(filter.value1);
-                        break;
-                    case 'less':
-                        passesFilter = parseFloat(propValue) < parseFloat(filter.value1);
-                        break;
-                    case 'between':
-                        const num = parseFloat(propValue);
-                        passesFilter = num >= parseFloat(filter.value1) && num <= parseFloat(filter.value2);
-                        break;
+                // Check each filter
+                for (const filter of layerFilterData.filters) {
+                    let searchAttribute = filter.attribute;
+                    
+                    console.log('Processing filter:', filter);
+                    console.log('Original attribute:', searchAttribute);
+                    
+                    // Handle TCR attribute mapping
+                    if (camelCaseId === 'tcrSchemes') {
+                        searchAttribute = getOriginalTCRAttributeName(filter.attribute);
+                        console.log('Mapped TCR attribute from', filter.attribute, 'to', searchAttribute);
+                    }
+                    
+                    const propValue = currentLayer.feature.properties[searchAttribute];
+                    console.log('Property value for', searchAttribute, ':', propValue);
+                    let passesFilter = false;
+                    
+                    switch (filter.operator) {
+                        case 'equals':
+                            passesFilter = propValue == filter.value1;
+                            break;
+                        case 'contains':
+                            passesFilter = propValue && propValue.toString().toLowerCase().includes(filter.value1.toLowerCase());
+                            break;
+                        case 'greater':
+                            passesFilter = parseFloat(propValue) > parseFloat(filter.value1);
+                            break;
+                        case 'less':
+                            passesFilter = parseFloat(propValue) < parseFloat(filter.value1);
+                            break;
+                        case 'between':
+                            const num = parseFloat(propValue);
+                            passesFilter = num >= parseFloat(filter.value1) && num <= parseFloat(filter.value2);
+                            break;
+                    }
+                    
+                    filterResults.push(passesFilter);
                 }
                 
-                // If any filter fails, hide the feature
-                if (!passesFilter) {
-                    showFeature = false;
-                    break;
+                // Apply AND/OR logic
+                if (layerFilterData.logic === 'AND') {
+                    // ALL filters must pass
+                    showFeature = filterResults.every(result => result === true);
+                } else {
+                    // ANY filter can pass (OR logic)
+                    showFeature = filterResults.some(result => result === true);
                 }
             }
             
-            // Show/hide feature based on all filters
-            if (currentLayer.setStyle) {
-                if (showFeature) {
-                    currentLayer.setStyle({ opacity: currentLayer.options.opacity || 1, fillOpacity: currentLayer.options.fillOpacity || 0.7 });
-                } else {
-                    currentLayer.setStyle({ opacity: 0, fillOpacity: 0 });
+            // Show or hide the feature based on filter results
+            if (showFeature) {
+                if (!map.hasLayer(currentLayer)) {
+                    layerGroup.addLayer(currentLayer);
+                }
+            } else {
+                if (map.hasLayer(currentLayer)) {
+                    layerGroup.removeLayer(currentLayer);
                 }
             }
         }
     }
     
-    // Apply all filters for this layer
+    // Apply filters to all layers in the group
     applyFiltersToLayer(layerGroup);
 }
 
@@ -1662,15 +1838,15 @@ function updateActiveFiltersDisplay() {
     
     // Display filters for each layer
     Object.keys(activeFilters).forEach(layerName => {
-        const layerFilters = activeFilters[layerName];
-        if (layerFilters && layerFilters.length > 0) {
+        const layerFilterData = activeFilters[layerName];
+        if (layerFilterData && layerFilterData.filters && layerFilterData.filters.length > 0) {
             hasFilters = true;
             
-            // Create layer header
+            // Create layer header with logic indicator
             const layerHeader = document.createElement('div');
             layerHeader.className = 'filter-layer-header';
             layerHeader.innerHTML = `
-                <strong>${formatLayerName(toCamelCase(layerName))}</strong>
+                <strong>${formatLayerName(toCamelCase(layerName))} (${layerFilterData.logic})</strong>
                 <button class="clear-layer-filters" onclick="clearLayerFilters('${layerName}')" title="Clear all filters for this layer">Clear All</button>
             `;
             layerHeader.style.cssText = `
@@ -1684,15 +1860,37 @@ function updateActiveFiltersDisplay() {
             activeFiltersList.appendChild(layerHeader);
             
             // Add individual filters
-            layerFilters.forEach((filter, index) => {
+            layerFilterData.filters.forEach((filter, index) => {
                 const filterText = `${filter.attribute} ${filter.operator} ${filter.value1}${filter.value2 ? ` and ${filter.value2}` : ''}`;
                 const filterDiv = document.createElement('div');
                 filterDiv.className = 'active-filter';
                 filterDiv.innerHTML = `
                     <span>${filterText}</span>
-                    <button onclick="removeLayerFilter('${layerName}', ${index})">×</button>
+                    <button onclick="removeFilterFromList('${layerName}', ${filter.id})" title="Remove this filter">×</button>
                 `;
-                filterDiv.style.marginLeft = '10px';
+                filterDiv.style.cssText = `
+                    margin-left: 10px;
+                    margin-bottom: 3px;
+                    padding: 3px 8px;
+                    background-color: #f0f0f0;
+                    border-radius: 3px;
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                `;
+                
+                const removeBtn = filterDiv.querySelector('button');
+                removeBtn.style.cssText = `
+                    background: #ff4444;
+                    color: white;
+                    border: none;
+                    border-radius: 3px;
+                    padding: 2px 6px;
+                    margin-left: 8px;
+                    cursor: pointer;
+                    font-size: 12px;
+                `;
+                
                 activeFiltersList.appendChild(filterDiv);
             });
         }
@@ -1702,6 +1900,28 @@ function updateActiveFiltersDisplay() {
         activeFiltersList.innerHTML = '<p class="no-filters">No active filters</p>';
     }
 }
+
+// Function to remove a specific filter from the list
+window.removeFilterFromList = function(layerName, filterId) {
+    if (activeFilters[layerName] && activeFilters[layerName].filters) {
+        activeFilters[layerName].filters = activeFilters[layerName].filters.filter(f => f.id !== filterId);
+        
+        // If no filters left, remove the layer from activeFilters
+        if (activeFilters[layerName].filters.length === 0) {
+            delete activeFilters[layerName];
+        }
+        
+        updateActiveFiltersDisplay();
+        applyLayerFilters(layerName);
+    }
+};
+
+// Function to clear all filters for a specific layer
+window.clearLayerFilters = function(layerName) {
+    delete activeFilters[layerName];
+    updateActiveFiltersDisplay();
+    applyLayerFilters(layerName);
+};
 
 // Global functions for filter management
 window.clearLayerFilters = function(layerName) {
@@ -2603,12 +2823,20 @@ function hideLoadingIndicator() {
 
 // Function to make popup draggable
 function makePopupDraggable(popup) {
+    console.log('makePopupDraggable called');
     const popupElement = popup.getElement();
-    if (!popupElement) return;
+    if (!popupElement) {
+        console.log('No popup element found');
+        return;
+    }
     
     const wrapper = popupElement.querySelector('.leaflet-popup-content-wrapper');
-    if (!wrapper) return;
+    if (!wrapper) {
+        console.log('No popup wrapper found');
+        return;
+    }
     
+    console.log('Popup dragging setup initiated');
     let isDragging = false;
     let startX, startY, startLatLng;
     let dragThreshold = 5; // Minimum pixel movement to start dragging
@@ -2616,12 +2844,15 @@ function makePopupDraggable(popup) {
     
     // Add mousedown event listener
     wrapper.addEventListener('mousedown', function(e) {
+        console.log('Popup mousedown event triggered');
         // Don't start dragging if clicking on buttons or interactive elements
         if (e.target.tagName === 'BUTTON' || e.target.closest('button') || 
             e.target.classList.contains('leaflet-popup-close-button')) {
+            console.log('Mousedown on interactive element, ignoring');
             return;
         }
         
+        console.log('Starting drag operation');
         startX = e.clientX;
         startY = e.clientY;
         startLatLng = popup.getLatLng();

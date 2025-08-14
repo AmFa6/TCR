@@ -268,6 +268,13 @@
                 <div class="styling-section">
                     <h4>Attribute Filters</h4>
                     <div class="control-group">
+                        <label for="filter-logic">Filter Logic:</label>
+                        <select id="filter-logic">
+                            <option value="AND">AND (all conditions must match)</option>
+                            <option value="OR">OR (any condition can match)</option>
+                        </select>
+                    </div>
+                    <div class="control-group">
                         <label for="filter-attribute">Filter by Attribute:</label>
                         <select id="filter-attribute">
                             <option value="">Select attribute...</option>
@@ -312,7 +319,8 @@
                 </div>
                 
                 <div class="modal-footer">
-                    <button id="apply-filter">Apply Filter</button>
+                    <button id="add-filter">Add Filter</button>
+                    <button id="apply-filters">Apply All Filters</button>
                     <button id="clear-all-filters">Clear All Filters</button>
                 </div>
             </div>
