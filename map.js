@@ -113,6 +113,7 @@ function setupMultiLayerPopups() {
             activePopup = null;
         } else {
             console.log('Skipping cleanup during navigation');
+            // Don't call removeHighlight during navigation!
         }
     });
 }
@@ -439,12 +440,7 @@ function showPopupAtIndex(index, latlng) {
     .setContent(popupContent)
     .openOn(map);
     
-    // Add event listener to remove highlight when popup is closed (but not during navigation)
-    if (!isNavigating) {
-        activePopup.on('remove', function() {
-            removeHighlight();
-        });
-    }
+    // No individual popup remove listener - handle all cleanup through global popupclose event
     
     // Make popup draggable
     activePopup.on('add', function() {
@@ -1465,6 +1461,12 @@ function populateValueSuggestions(attributeName) {
     if (layerGroup) {
         const uniqueValues = new Set();
         
+        // For TCR schemes, we need to map the displayed attribute name back to the original
+        let searchAttributeName = attributeName;
+        if (camelCaseId === 'tcrSchemes') {
+            searchAttributeName = getOriginalTCRAttributeName(attributeName);
+        }
+        
         layerGroup.eachLayer(layer => {
             // Function to recursively get all values for the attribute
             function getAllValues(currentLayer) {
@@ -1473,9 +1475,16 @@ function populateValueSuggestions(attributeName) {
                     currentLayer.getLayers().forEach(subLayer => getAllValues(subLayer));
                 } else if (currentLayer.feature && currentLayer.feature.properties) {
                     // This is a feature layer with properties
-                    const value = currentLayer.feature.properties[attributeName];
+                    const value = currentLayer.feature.properties[searchAttributeName];
                     if (value !== null && value !== undefined && value !== '') {
-                        uniqueValues.add(value.toString());
+                        // Clean the value (remove � characters)
+                        let cleanValue = value.toString();
+                        if (typeof cleanValue === 'string') {
+                            cleanValue = cleanValue.replace(/�/g, '');
+                        }
+                        if (cleanValue !== '') {
+                            uniqueValues.add(cleanValue);
+                        }
                     }
                 }
             }
@@ -1802,6 +1811,35 @@ function renameTCRAttributes(properties) {
     });
     
     return renamedProperties;
+}
+
+// Function to get the original TCR attribute name from the renamed one
+function getOriginalTCRAttributeName(renamedAttribute) {
+    const reverseAttributeMap = {
+        'Id': 'Id',
+        'Assumptions': 'JLTP5_in_1',
+        'Further info required for mapping': 'JLTP5_in_2',
+        'Lead Organisation': 'JLTP5_in_3',
+        'Partner Organisations': 'JLTP5_in_4',
+        'Action': 'JLTP5_in_5',
+        'Mode': 'JLTP5_in_6',
+        'Type': 'JLTP5_in_7',
+        'Source': 'JLTP5_in_8',
+        'Delivery Scale': 'JLTP5_in_9',
+        'Cost': 'JLTP5_in10',
+        'Funding already secured': 'JLTP5_in11',
+        'Dependencies': 'JLTP5_in12',
+        'Programme': 'JLTP5_in13',
+        'Active Travel / LCWIP Package': 'JLTP5_in14',
+        'CRSTS2': 'JLTP5_in15',
+        'CRSTS2 Rationale': 'JLTP5_in16',
+        'Notes / Comments': 'JLTP5_in17',
+        'Overview': 'JLTP5_in18',
+        'Package Ref': 'JLTP5_in19',
+        '-': 'JLTP5_in20'
+    };
+    
+    return reverseAttributeMap[renamedAttribute] || renamedAttribute;
 }
 
 // Function to create popup content showing specific attributes per layer
