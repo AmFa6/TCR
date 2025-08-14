@@ -1218,18 +1218,22 @@ function populateFilterAttributes(layerName) {
     
     // Custom attribute display names
     const attributeDisplayNames = {
-        'TUEAM': 'Weekday AM Peak',
-        'TUEBP': 'Weekday Between Peaks',
-        'TUEEP': 'Weekday Evening Peak',
-        'TUEOP': 'Weekday Outside Peak',
-        'SATAM': 'Saturday AM Peak',
-        'SATBP': 'Saturday Between Peaks',
-        'SATEP': 'Saturday Evening Peak',
-        'SATOP': 'Saturday Outside Peak',
-        'SUNAM': 'Sunday AM Peak',
-        'SUNBP': 'Sunday Between Peaks',
-        'SUNEP': 'Sunday Evening Peak',
-        'SUNOP': 'Sunday Outside Peak'
+        'TUEAM': 'Weekday AM Frequency',
+        'TUEBP': 'Weekday IP Frequency',
+        'TUEEP': 'Weekday PM Frequency',
+        'TUEOP': 'Weekday OP Frequency',
+        'SATAM': 'Saturday AM Frequency',
+        'SATBP': 'Saturday IP Frequency',
+        'SATEP': 'Saturday PM Frequency',
+        'SATOP': 'Saturday OP Frequency',
+        'SUNAM': 'Sunday AM Frequency',
+        'SUNBP': 'Sunday IP Frequency',
+        'SUNEP': 'Sunday PM Frequency',
+        'SUNOP': 'Sunday OP Frequency',
+        'Freq_AM': 'AM Frequency',
+        'Freq_IP': 'IP Frequency',
+        'Freq_PM': 'PM Frequency',
+        'Freq_Night': 'OP Frequency'
     };
     
     if (layerGroup) {
@@ -1721,7 +1725,11 @@ function createFullPopupContent(feature, groupName, layerTitle = null) {
         'SUNAM': 'Sunday AM Peak',
         'SUNBP': 'Sunday Between Peaks',
         'SUNEP': 'Sunday Evening Peak',
-        'SUNOP': 'Sunday Outside Peak'
+        'SUNOP': 'Sunday Outside Peak',
+        'Freq_AM': 'AM Frequency',
+        'Freq_IP': 'IP Frequency',
+        'Freq_PM': 'PM Frequency',
+        'Freq_Night': 'OP Frequency'
     };
     
     // Filter properties based on layer type

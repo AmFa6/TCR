@@ -48,7 +48,7 @@ html, body {
 }
 
 .popup-table td:first-child {
-    width: 50px;
+    width: 100px;
     font-weight: bold;
     vertical-align: top;
     padding: 4px;
@@ -56,7 +56,7 @@ html, body {
 }
 
 .popup-table td:last-child {
-    width: 100px;
+    width: 200px;
     padding: 4px;
     border-bottom: 1px solid #ddd;
     word-wrap: break-word;
