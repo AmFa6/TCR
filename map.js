@@ -114,6 +114,7 @@ function isLayerVisible(groupName) {
         });
     }
     
+    // For all other layers, check the main checkbox
     return checkbox && checkbox.checked;
 }
 
@@ -124,13 +125,19 @@ function findLayersAtPoint(latlng, point) {
     Object.keys(layerGroups).forEach(groupName => {
         const layerGroup = layerGroups[groupName];
         
+        // Debug logging
+        const hasLayer = map.hasLayer(layerGroup);
+        const isVisible = isLayerVisible(groupName);
+        console.log(`Layer ${groupName}: hasLayer=${hasLayer}, isVisible=${isVisible}, layerCount=${layerGroup.getLayers().length}`);
+        
         // Only search layers that are currently visible on the map AND have their checkbox checked
-        if (map.hasLayer(layerGroup) && isLayerVisible(groupName)) {
+        if (hasLayer && isVisible) {
             // Recursively search through layers
             searchLayerGroup(layerGroup, latlng, point, groupName, foundLayers);
         }
     });
     
+    console.log(`Found ${foundLayers.length} layers at point:`, foundLayers.map(l => l.groupName));
     return foundLayers;
 }
 
@@ -211,12 +218,37 @@ function isLayerAtPoint(layer, latlng, point) {
 
 function isPointInPolygon(point, polygon) {
     // Handle nested arrays (polygons with holes)
-    const coords = Array.isArray(polygon[0]) ? polygon[0] : polygon;
+    let coords;
+    if (Array.isArray(polygon) && polygon.length > 0) {
+        // Handle different polygon structures
+        if (Array.isArray(polygon[0])) {
+            // Polygon with potential holes - use outer ring
+            coords = polygon[0];
+        } else if (polygon[0] && polygon[0].lat !== undefined) {
+            // Direct coordinate array
+            coords = polygon;
+        } else {
+            console.warn('Unexpected polygon structure:', polygon);
+            return false;
+        }
+    } else {
+        console.warn('Invalid polygon data:', polygon);
+        return false;
+    }
+    
+    if (!coords || coords.length < 3) {
+        return false;
+    }
     
     let inside = false;
     for (let i = 0, j = coords.length - 1; i < coords.length; j = i++) {
-        if (((coords[i].lat > point.lat) !== (coords[j].lat > point.lat)) &&
-            (point.lng < (coords[j].lng - coords[i].lng) * (point.lat - coords[i].lat) / (coords[j].lat - coords[i].lat) + coords[i].lng)) {
+        const xi = coords[i].lat || coords[i][1];
+        const yi = coords[i].lng || coords[i][0];
+        const xj = coords[j].lat || coords[j][1];
+        const yj = coords[j].lng || coords[j][0];
+        
+        if (((yi > point.lng) !== (yj > point.lng)) &&
+            (point.lat < (xj - xi) * (point.lng - yi) / (yj - yi) + xi)) {
             inside = !inside;
         }
     }
@@ -262,6 +294,35 @@ function distanceToLineSegment(point, lineStart, lineEnd) {
     return Math.sqrt(dx * dx + dy * dy);
 }
 
+function calculatePopupPosition(layer, clickedLatLng) {
+    try {
+        // For point features, offset the popup slightly
+        if (layer instanceof L.Marker || layer instanceof L.CircleMarker) {
+            const layerLatLng = layer.getLatLng();
+            const offset = 0.001; // Small offset in degrees
+            return [layerLatLng.lat + offset, layerLatLng.lng + offset];
+        }
+        
+        // For polygon and line features, try to get bounds
+        if (layer.getBounds && typeof layer.getBounds === 'function') {
+            const bounds = layer.getBounds();
+            if (bounds.isValid()) {
+                // Position popup at the northeast corner of bounds with small offset
+                const ne = bounds.getNorthEast();
+                const offset = 0.001;
+                return [ne.lat + offset, ne.lng + offset];
+            }
+        }
+        
+        // Fallback to clicked position with small offset
+        return [clickedLatLng.lat + 0.001, clickedLatLng.lng + 0.001];
+        
+    } catch (error) {
+        console.warn('Error calculating popup position:', error);
+        return clickedLatLng;
+    }
+}
+
 function showPopupAtIndex(index, latlng) {
     if (index < 0 || index >= currentPopupLayers.length) {
         return;
@@ -305,12 +366,15 @@ function showPopupAtIndex(index, latlng) {
         popupContent = popupContent.replace('<div class="popup-header">', navigationHTML + '<div class="popup-header">');
     }
     
+    // Calculate optimal popup position outside feature bounds
+    const popupPosition = calculatePopupPosition(layer, latlng);
+    
     // Create and show popup
     activePopup = L.popup({
         maxWidth: 300,
         className: 'multi-layer-popup'
     })
-    .setLatLng(latlng)
+    .setLatLng(popupPosition)
     .setContent(popupContent)
     .openOn(map);
     
@@ -1093,6 +1157,32 @@ function populateFilterAttributes(layerName) {
     const camelCaseId = toCamelCase(layerName);
     const layerGroup = layerGroups[camelCaseId];
     
+    // Define the same attribute filters as used in popups
+    const layerAttributeFilters = {
+        'growthZones': ['Name', 'GrowthType'],
+        'housing': ['Path'], // Exclude Path - show all others
+        'ptal': ['GRID_ID', 'PTAI', 'PTAL'],
+        'railStations': ['XCoord', 'YCoord'], // Exclude XCoord and YCoord - show all others
+        'busLines': ['TUEAM', 'TUEBP', 'TUEEP', 'TUEOP', 'SATAM', 'SATBP', 'SATEP', 'SATOP', 'SUNAM', 'SUNBP', 'SUNEP', 'SUNOP'], // Only show these
+        'busStops': ['X', 'Y'] // Exclude X and Y - show all others
+    };
+    
+    // Custom attribute display names
+    const attributeDisplayNames = {
+        'TUEAM': 'Weekday AM Peak',
+        'TUEBP': 'Weekday Between Peaks',
+        'TUEEP': 'Weekday Evening Peak',
+        'TUEOP': 'Weekday Outside Peak',
+        'SATAM': 'Saturday AM Peak',
+        'SATBP': 'Saturday Between Peaks',
+        'SATEP': 'Saturday Evening Peak',
+        'SATOP': 'Saturday Outside Peak',
+        'SUNAM': 'Sunday AM Peak',
+        'SUNBP': 'Sunday Between Peaks',
+        'SUNEP': 'Sunday Evening Peak',
+        'SUNOP': 'Sunday Outside Peak'
+    };
+    
     if (layerGroup) {
         const attributes = new Set();
         let featureCount = 0;
@@ -1106,8 +1196,38 @@ function populateFilterAttributes(layerName) {
                 } else if (currentLayer.feature && currentLayer.feature.properties) {
                     // This is a feature layer with properties
                     featureCount++;
-                    Object.keys(currentLayer.feature.properties).forEach(key => {
-                        const value = currentLayer.feature.properties[key];
+                    let properties = currentLayer.feature.properties;
+                    
+                    // Apply TCR attribute renaming if this is a TCR layer
+                    if (camelCaseId === 'tcrSchemes') {
+                        properties = renameTCRAttributes(properties);
+                    }
+                    
+                    // Apply the same filtering logic as popups
+                    let filteredProperties = {};
+                    if (layerAttributeFilters[camelCaseId]) {
+                        if (camelCaseId === 'growthZones' || camelCaseId === 'ptal' || camelCaseId === 'busLines') {
+                            // Include only specified attributes
+                            layerAttributeFilters[camelCaseId].forEach(attr => {
+                                if (properties.hasOwnProperty(attr)) {
+                                    filteredProperties[attr] = properties[attr];
+                                }
+                            });
+                        } else {
+                            // Exclude specified attributes, show all others
+                            Object.keys(properties).forEach(key => {
+                                if (!layerAttributeFilters[camelCaseId].includes(key)) {
+                                    filteredProperties[key] = properties[key];
+                                }
+                            });
+                        }
+                    } else {
+                        // For other layers, show all attributes
+                        filteredProperties = properties;
+                    }
+                    
+                    Object.keys(filteredProperties).forEach(key => {
+                        const value = filteredProperties[key];
                         // Include attribute if it has a value (not null, undefined, or empty string)
                         if (value !== null && value !== undefined && value !== '') {
                             attributes.add(key);
@@ -1143,8 +1263,9 @@ function populateFilterAttributes(layerName) {
         Array.from(attributes).sort().forEach(attr => {
             const option = document.createElement('option');
             option.value = attr;
-            // Clean up attribute name for display (replace underscores with spaces, capitalize)
-            option.textContent = attr.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+            // Use custom display names if available, otherwise format the attribute name
+            option.textContent = attributeDisplayNames[attr] || 
+                               attr.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
             filterAttribute.appendChild(option);
         });
     } else {
