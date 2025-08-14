@@ -94,6 +94,7 @@ function convertMultiPolygonToPolygons(geoJson) {
 let currentPopupLayers = [];
 let currentPopupIndex = 0;
 let activePopup = null;
+let isNavigating = false; // Flag to prevent popup close cleanup during navigation
 
 function setupMultiLayerPopups() {
     // Override the default popup behavior with higher priority
@@ -101,12 +102,17 @@ function setupMultiLayerPopups() {
         handleMapClick(e);
     });
     
-    // Clean up highlights when popup is closed
+    // Clean up highlights when popup is closed (but not during navigation)
     map.on('popupclose', function(e) {
-        removeHighlight();
-        currentPopupLayers = [];
-        currentPopupIndex = 0;
-        activePopup = null;
+        // Only clear state if we're not in the middle of navigation
+        // We can detect this by checking if we have a valid currentPopupIndex and layers
+        console.log('popupclose event, currentPopupLayers.length:', currentPopupLayers.length, 'isNavigating:', isNavigating);
+        if (!isNavigating) {
+            removeHighlight();
+            currentPopupLayers = [];
+            currentPopupIndex = 0;
+            activePopup = null;
+        }
     });
 }
 
@@ -417,10 +423,16 @@ function showPopupAtIndex(index, latlng) {
     // Calculate optimal popup position outside feature bounds
     const popupPosition = calculatePopupPosition(layer, latlng);
     
-    // Create and show popup
+    // Create and show popup without arrow tip and make it draggable
     activePopup = L.popup({
         maxWidth: 400,
-        className: 'multi-layer-popup'
+        className: 'multi-layer-popup',
+        closeButton: true,
+        autoPan: false,
+        closeOnEscapeKey: true,
+        closeOnClick: false,
+        offset: [0, 0], // Remove offset to eliminate arrow positioning
+        autoPanPadding: [5, 5]
     })
     .setLatLng(popupPosition)
     .setContent(popupContent)
@@ -429,6 +441,11 @@ function showPopupAtIndex(index, latlng) {
     // Add event listener to remove highlight when popup is closed
     activePopup.on('remove', function() {
         removeHighlight();
+    });
+    
+    // Make popup draggable
+    activePopup.on('add', function() {
+        makePopupDraggable(activePopup);
     });
 }
 
@@ -464,6 +481,7 @@ function formatPropertyValue(value) {
 window.previousPopup = function() {
     console.log('previousPopup called, currentPopupIndex:', currentPopupIndex, 'total layers:', currentPopupLayers.length);
     if (currentPopupIndex > 0) {
+        isNavigating = true; // Set flag to prevent cleanup during navigation
         currentPopupIndex--;
         console.log('Moving to previous, new index:', currentPopupIndex);
         
@@ -478,16 +496,19 @@ window.previousPopup = function() {
             latlng = activePopup.getLatLng();
         } else {
             console.error('Cannot determine latlng for navigation');
+            isNavigating = false;
             return;
         }
         
         showPopupAtIndex(currentPopupIndex, latlng);
+        isNavigating = false; // Clear flag after navigation
     }
 };
 
 window.nextPopup = function() {
     console.log('nextPopup called, currentPopupIndex:', currentPopupIndex, 'total layers:', currentPopupLayers.length);
     if (currentPopupIndex < currentPopupLayers.length - 1) {
+        isNavigating = true; // Set flag to prevent cleanup during navigation
         currentPopupIndex++;
         console.log('Moving to next, new index:', currentPopupIndex);
         
@@ -502,10 +523,12 @@ window.nextPopup = function() {
             latlng = activePopup.getLatLng();
         } else {
             console.error('Cannot determine latlng for navigation');
+            isNavigating = false;
             return;
         }
         
         showPopupAtIndex(currentPopupIndex, latlng);
+        isNavigating = false; // Clear flag after navigation
     }
 };
 
@@ -2512,6 +2535,75 @@ function hideLoadingIndicator() {
     const loadingDiv = document.getElementById('loading-indicator');
     if (loadingDiv) {
         loadingDiv.remove();
+    }
+}
+
+// Function to make popup draggable
+function makePopupDraggable(popup) {
+    const popupElement = popup.getElement();
+    if (!popupElement) return;
+    
+    const wrapper = popupElement.querySelector('.leaflet-popup-content-wrapper');
+    if (!wrapper) return;
+    
+    let isDragging = false;
+    let startX, startY, startLatLng;
+    
+    // Add mousedown event listener
+    wrapper.addEventListener('mousedown', function(e) {
+        // Don't start dragging if clicking on buttons or interactive elements
+        if (e.target.tagName === 'BUTTON' || e.target.closest('button')) {
+            return;
+        }
+        
+        isDragging = true;
+        startX = e.clientX;
+        startY = e.clientY;
+        startLatLng = popup.getLatLng();
+        
+        // Prevent text selection while dragging
+        e.preventDefault();
+        
+        // Add temporary event listeners for mousemove and mouseup
+        document.addEventListener('mousemove', handleMouseMove);
+        document.addEventListener('mouseup', handleMouseUp);
+        
+        // Change cursor to grabbing
+        wrapper.style.cursor = 'grabbing';
+    });
+    
+    function handleMouseMove(e) {
+        if (!isDragging) return;
+        
+        const deltaX = e.clientX - startX;
+        const deltaY = e.clientY - startY;
+        
+        // Convert pixel movement to lat/lng movement
+        const mapBounds = map.getBounds();
+        const mapSize = map.getSize();
+        
+        const latDelta = (deltaY / mapSize.y) * (mapBounds.getNorth() - mapBounds.getSouth());
+        const lngDelta = (deltaX / mapSize.x) * (mapBounds.getEast() - mapBounds.getWest());
+        
+        const newLatLng = L.latLng(
+            startLatLng.lat - latDelta,
+            startLatLng.lng + lngDelta
+        );
+        
+        popup.setLatLng(newLatLng);
+    }
+    
+    function handleMouseUp() {
+        if (isDragging) {
+            isDragging = false;
+            
+            // Remove temporary event listeners
+            document.removeEventListener('mousemove', handleMouseMove);
+            document.removeEventListener('mouseup', handleMouseUp);
+            
+            // Reset cursor
+            wrapper.style.cursor = 'move';
+        }
     }
 }
 
