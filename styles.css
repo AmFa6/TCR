@@ -310,6 +310,42 @@ h4.legend-title {
     margin: 2px 0;
 }
 
+/* Style sections in modal */
+.style-section {
+    margin-bottom: 20px;
+    padding: 15px;
+    border: 1px solid #e0e0e0;
+    border-radius: 5px;
+    background-color: #f9f9f9;
+}
+
+.style-section h4 {
+    margin: 0 0 10px 0;
+    color: #333;
+    font-size: 1.1em;
+    border-bottom: 1px solid #ddd;
+    padding-bottom: 5px;
+}
+
+.style-group {
+    margin-bottom: 15px;
+}
+
+.style-group label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: bold;
+    color: #555;
+}
+
+.category-item {
+    margin-bottom: 8px;
+    padding: 8px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    background-color: #fff;
+}
+
 /* Popup styling to match TAF */
 .taf-popup {
     font-family: 'Trebuchet MS', sans-serif;

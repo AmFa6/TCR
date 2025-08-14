@@ -71,100 +71,107 @@ function createStyleModal() {
             </div>
             
             <div class="style-tabs">
-                <button class="tab-btn active" onclick="switchStyleTab('fill')">Fill</button>
-                <button class="tab-btn" onclick="switchStyleTab('outline')">Outline</button>
-                <button class="tab-btn" onclick="switchStyleTab('general')">General</button>
+                <button class="tab-btn active" onclick="switchStyleTab('styling')">Layer Styling</button>
             </div>
             
-            <!-- Fill Styling -->
-            <div id="fill-tab" class="style-tab active">
-                <!-- Fill Color -->
-                <div class="style-group">
-                    <label>Color:</label>
-                    <select id="fill-color-method">
-                        <option value="simple">Simple</option>
-                        <option value="categorized">Categorized</option>
-                        <option value="graduated">Graduated</option>
-                    </select>
-                    <div id="fill-color-controls"></div>
+            <!-- Single Styling Tab with Fill and Outline sections -->
+            <div id="styling-tab" class="style-tab active">
+                <!-- Fill Section -->
+                <div class="style-section">
+                    <h4>Fill</h4>
+                    
+                    <!-- Fill Color -->
+                    <div class="style-group">
+                        <label>Color:</label>
+                        <select id="fill-color-method">
+                            <option value="simple">Simple</option>
+                            <option value="categorized">Categorized</option>
+                            <option value="graduated">Graduated</option>
+                        </select>
+                        <div id="fill-color-controls"></div>
+                    </div>
+                    
+                    <!-- Fill Opacity -->
+                    <div class="style-group">
+                        <label>Opacity:</label>
+                        <select id="fill-opacity-method">
+                            <option value="simple">Simple</option>
+                            <option value="graduated">Graduated</option>
+                        </select>
+                        <div id="fill-opacity-controls"></div>
+                    </div>
                 </div>
                 
-                <!-- Fill Opacity -->
-                <div class="style-group">
-                    <label>Opacity:</label>
-                    <select id="fill-opacity-method">
-                        <option value="simple">Simple</option>
-                        <option value="graduated">Graduated</option>
-                    </select>
-                    <div id="fill-opacity-controls"></div>
-                </div>
-            </div>
-            
-            <!-- Outline Styling -->
-            <div id="outline-tab" class="style-tab">
-                <!-- Outline Color -->
-                <div class="style-group">
-                    <label>Color:</label>
-                    <select id="outline-color-method">
-                        <option value="simple">Simple</option>
-                        <option value="categorized">Categorized</option>
-                        <option value="graduated">Graduated</option>
-                    </select>
-                    <div id="outline-color-controls"></div>
-                </div>
-                
-                <!-- Outline Opacity -->
-                <div class="style-group">
-                    <label>Opacity:</label>
-                    <select id="outline-opacity-method">
-                        <option value="simple">Simple</option>
-                        <option value="graduated">Graduated</option>
-                    </select>
-                    <div id="outline-opacity-controls"></div>
-                </div>
-                
-                <!-- Outline Weight -->
-                <div class="style-group">
-                    <label>Weight:</label>
-                    <select id="outline-weight-method">
-                        <option value="simple">Simple</option>
-                        <option value="graduated">Graduated</option>
-                    </select>
-                    <div id="outline-weight-controls"></div>
-                </div>
-            </div>
-            
-            <!-- General Styling (for points and lines) -->
-            <div id="general-tab" class="style-tab">
-                <!-- Color -->
-                <div class="style-group">
-                    <label>Color:</label>
-                    <select id="general-color-method">
-                        <option value="simple">Simple</option>
-                        <option value="categorized">Categorized</option>
-                        <option value="graduated">Graduated</option>
-                    </select>
-                    <div id="general-color-controls"></div>
+                <!-- Outline Section -->
+                <div class="style-section">
+                    <h4>Outline</h4>
+                    
+                    <!-- Outline Color -->
+                    <div class="style-group">
+                        <label>Color:</label>
+                        <select id="outline-color-method">
+                            <option value="simple">Simple</option>
+                            <option value="categorized">Categorized</option>
+                            <option value="graduated">Graduated</option>
+                        </select>
+                        <div id="outline-color-controls"></div>
+                    </div>
+                    
+                    <!-- Outline Opacity -->
+                    <div class="style-group">
+                        <label>Opacity:</label>
+                        <select id="outline-opacity-method">
+                            <option value="simple">Simple</option>
+                            <option value="graduated">Graduated</option>
+                        </select>
+                        <div id="outline-opacity-controls"></div>
+                    </div>
+                    
+                    <!-- Outline Weight -->
+                    <div class="style-group">
+                        <label>Weight:</label>
+                        <select id="outline-weight-method">
+                            <option value="simple">Simple</option>
+                            <option value="graduated">Graduated</option>
+                        </select>
+                        <div id="outline-weight-controls"></div>
+                    </div>
                 </div>
                 
-                <!-- Opacity -->
-                <div class="style-group">
-                    <label>Opacity:</label>
-                    <select id="general-opacity-method">
-                        <option value="simple">Simple</option>
-                        <option value="graduated">Graduated</option>
-                    </select>
-                    <div id="general-opacity-controls"></div>
-                </div>
-                
-                <!-- Size/Weight -->
-                <div class="style-group">
-                    <label>Size/Weight:</label>
-                    <select id="general-size-method">
-                        <option value="simple">Simple</option>
-                        <option value="graduated">Graduated</option>
-                    </select>
-                    <div id="general-size-controls"></div>
+                <!-- General Section (for points and lines) -->
+                <div class="style-section" id="general-section" style="display: none;">
+                    <h4>Style</h4>
+                    
+                    <!-- Color -->
+                    <div class="style-group">
+                        <label>Color:</label>
+                        <select id="general-color-method">
+                            <option value="simple">Simple</option>
+                            <option value="categorized">Categorized</option>
+                            <option value="graduated">Graduated</option>
+                        </select>
+                        <div id="general-color-controls"></div>
+                    </div>
+                    
+                    <!-- Opacity -->
+                    <div class="style-group">
+                        <label>Opacity:</label>
+                        <select id="general-opacity-method">
+                            <option value="simple">Simple</option>
+                            <option value="graduated">Graduated</option>
+                        </select>
+                        <div id="general-opacity-controls"></div>
+                    </div>
+                    
+                    <!-- Size/Weight -->
+                    <div class="style-group">
+                        <label>Size/Weight:</label>
+                        <select id="general-size-method">
+                            <option value="simple">Simple</option>
+                            <option value="graduated">Graduated</option>
+                        </select>
+                        <div id="general-size-controls"></div>
+                    </div>
                 </div>
             </div>
             
@@ -179,20 +186,28 @@ function createStyleModal() {
     return modal;
 }
 
-// Switch between styling tabs
+// Switch between styling tabs (simplified for single tab)
 function switchStyleTab(tabName) {
     // Remove active class from all tabs and buttons
     document.querySelectorAll('.style-tab').forEach(tab => tab.classList.remove('active'));
     document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
     
     // Add active class to selected tab and button
-    document.getElementById(`${tabName}-tab`).classList.add('active');
-    document.querySelector(`[onclick="switchStyleTab('${tabName}')"]`).classList.add('active');
+    const tab = document.getElementById(`${tabName}-tab`);
+    if (tab) {
+        tab.classList.add('active');
+        document.querySelector(`[onclick="switchStyleTab('${tabName}')"]`).classList.add('active');
+    }
 }
 
 // Determine the geometry type of a layer
 function getLayerGeometryType(layerId) {
     const camelCaseId = toCamelCase(layerId);
+    
+    // Special handling for TCR schemes - always treat as polygon for styling purposes
+    if (layerId && layerId.includes('schemes')) {
+        return 'polygon';
+    }
     
     // Check if layerGroups is available
     if (typeof layerGroups === 'undefined') {
@@ -239,49 +254,53 @@ function getLayerGeometryType(layerId) {
     return geometryType;
 }
 
-// Setup tabs based on geometry type
+// Setup sections based on geometry type
 function setupTabsForGeometry(geometryType) {
-    const tabsContainer = document.querySelector('.style-tabs');
-    const fillTab = document.getElementById('fill-tab');
-    const outlineTab = document.getElementById('outline-tab');
-    const generalTab = document.getElementById('general-tab');
+    // Find sections by their position and h4 content
+    const styleSections = document.querySelectorAll('.style-section');
+    let fillSection = null;
+    let outlineSection = null;
     
-    // Hide all tabs first
-    fillTab.style.display = 'none';
-    outlineTab.style.display = 'none';
-    generalTab.style.display = 'none';
+    styleSections.forEach(section => {
+        const h4 = section.querySelector('h4');
+        if (h4) {
+            if (h4.textContent.includes('Fill')) {
+                fillSection = section;
+            } else if (h4.textContent.includes('Outline')) {
+                outlineSection = section;
+            }
+        }
+    });
     
-    // Clear existing tab buttons
-    tabsContainer.innerHTML = '';
+    const generalSection = document.getElementById('general-section');
     
-    if (geometryType === 'polygon') {
-        // Show Fill and Outline tabs for polygons
-        fillTab.style.display = 'block';
-        outlineTab.style.display = 'block';
-        
-        tabsContainer.innerHTML = `
-            <button class="tab-btn active" onclick="switchStyleTab('fill')">Fill</button>
-            <button class="tab-btn" onclick="switchStyleTab('outline')">Outline</button>
-        `;
-        
-        // Show fill tab by default
-        fillTab.classList.add('active');
-        outlineTab.classList.remove('active');
+    if (geometryType === 'polygon' || geometryType === 'unknown') {
+        // Show Fill and Outline sections for polygons
+        if (fillSection) fillSection.style.display = 'block';
+        if (outlineSection) outlineSection.style.display = 'block';
+        if (generalSection) generalSection.style.display = 'none';
     } else {
-        // Show General tab for points and lines
-        generalTab.style.display = 'block';
-        
-        const tabLabel = geometryType === 'point' ? 'Point Style' : 
-                        geometryType === 'line' ? 'Line Style' : 'Style';
-        
-        tabsContainer.innerHTML = `
-            <button class="tab-btn active" onclick="switchStyleTab('general')">${tabLabel}</button>
-        `;
-        
-        // Show general tab by default
-        generalTab.classList.add('active');
-        fillTab.classList.remove('active');
-        outlineTab.classList.remove('active');
+        // Show only General section for points and lines
+        if (fillSection) fillSection.style.display = 'none';
+        if (outlineSection) outlineSection.style.display = 'none';
+        if (generalSection) {
+            generalSection.style.display = 'block';
+            // Update the header based on geometry type
+            const header = generalSection.querySelector('h4');
+            if (header) {
+                header.textContent = geometryType === 'point' ? 'Point Style' : 
+                                   geometryType === 'line' ? 'Line Style' : 'Style';
+            }
+        }
+    }
+    
+    // Special handling for TCR Schemes - treat as polygon but apply to mixed geometry
+    const modal = document.getElementById('style-modal');
+    const layerId = modal ? modal.getAttribute('data-current-layer') : null;
+    if (layerId && layerId.includes('schemes')) {
+        if (fillSection) fillSection.style.display = 'block';
+        if (outlineSection) outlineSection.style.display = 'block';
+        if (generalSection) generalSection.style.display = 'none';
     }
 }
 
@@ -435,8 +454,25 @@ function createCategorizedControls(container, controlId, styleConfig) {
         <button onclick="addCategory('${controlId}')">Add Category</button>
     `;
     
-    // Populate attributes
-    populateAttributeDropdown(`${controlId}-attribute`);
+    // Populate attributes after the container is updated
+    setTimeout(() => {
+        populateAttributeDropdown(`${controlId}-attribute`);
+        
+        // Set the attribute if it exists in styleConfig
+        if (styleConfig.attribute) {
+            const select = document.getElementById(`${controlId}-attribute`);
+            if (select) {
+                select.value = styleConfig.attribute;
+            }
+        }
+        
+        // Add existing categories if they exist
+        if (styleConfig.categories && styleConfig.categories.length > 0) {
+            styleConfig.categories.forEach(category => {
+                addCategory(controlId, category.value, category.style);
+            });
+        }
+    }, 100);
 }
 
 // Create graduated style controls
@@ -477,8 +513,18 @@ function createGraduatedControls(container, controlId, styleConfig) {
         </div>
     `;
     
-    // Populate attributes
-    populateAttributeDropdown(`${controlId}-attribute`);
+    // Populate attributes after the container is updated
+    setTimeout(() => {
+        populateAttributeDropdown(`${controlId}-attribute`);
+        
+        // Set the attribute if it exists in styleConfig
+        if (styleConfig.attribute) {
+            const select = document.getElementById(`${controlId}-attribute`);
+            if (select) {
+                select.value = styleConfig.attribute;
+            }
+        }
+    }, 100);
 }
 
 // Populate attribute dropdown for current layer
@@ -631,7 +677,25 @@ function collectMethodConfig(controlId) {
             
         case 'categorized':
             config.attribute = document.getElementById(`${controlId}-attribute`).value;
-            config.categories = []; // Collect category configurations
+            config.categories = [];
+            
+            // Collect categories from the UI
+            const categoriesDiv = document.getElementById(`${controlId}-categories`);
+            if (categoriesDiv) {
+                const categoryItems = categoriesDiv.querySelectorAll('.category-item');
+                categoryItems.forEach(item => {
+                    const valueInput = item.querySelector('.category-value');
+                    const styleInput = item.querySelector('.category-style');
+                    if (valueInput && styleInput && valueInput.value.trim()) {
+                        config.categories.push({
+                            value: valueInput.value.trim(),
+                            style: styleInput.type === 'color' ? styleInput.value : parseFloat(styleInput.value)
+                        });
+                    }
+                });
+            }
+            
+            config.defaultValue = '#cccccc'; // Default color for unmatched categories
             break;
             
         case 'graduated':
@@ -675,7 +739,47 @@ function applyStyleToLayer(styleConfig) {
             if (currentLayer.getLayers) {
                 currentLayer.getLayers().forEach(subLayer => styleFeature(subLayer));
             } else if (currentLayer.feature && currentLayer.setStyle) {
-                const newStyle = calculateFeatureStyle(currentLayer.feature, styleConfig);
+                let newStyle = {};
+                
+                // Special handling for TCR schemes (mixed geometry)
+                if (layerId && layerId.includes('schemes')) {
+                    const geomType = currentLayer.feature.geometry.type;
+                    
+                    if (geomType === 'Polygon' || geomType === 'MultiPolygon') {
+                        // Apply fill and outline to polygons
+                        newStyle = calculateFeatureStyle(currentLayer.feature, styleConfig);
+                    } else if (geomType === 'Point' || geomType === 'MultiPoint') {
+                        // Apply outline styles as point styles
+                        if (styleConfig.outline) {
+                            if (styleConfig.outline.color) {
+                                newStyle.color = calculateStyleValue(currentLayer.feature, styleConfig.outline.color);
+                            }
+                            if (styleConfig.outline.opacity) {
+                                newStyle.opacity = calculateStyleValue(currentLayer.feature, styleConfig.outline.opacity);
+                            }
+                            if (styleConfig.outline.weight) {
+                                newStyle.radius = calculateStyleValue(currentLayer.feature, styleConfig.outline.weight) * 2;
+                            }
+                        }
+                    } else if (geomType === 'LineString' || geomType === 'MultiLineString') {
+                        // Apply outline styles as line styles
+                        if (styleConfig.outline) {
+                            if (styleConfig.outline.color) {
+                                newStyle.color = calculateStyleValue(currentLayer.feature, styleConfig.outline.color);
+                            }
+                            if (styleConfig.outline.opacity) {
+                                newStyle.opacity = calculateStyleValue(currentLayer.feature, styleConfig.outline.opacity);
+                            }
+                            if (styleConfig.outline.weight) {
+                                newStyle.weight = calculateStyleValue(currentLayer.feature, styleConfig.outline.weight);
+                            }
+                        }
+                    }
+                } else {
+                    // Standard styling for homogeneous layers
+                    newStyle = calculateFeatureStyle(currentLayer.feature, styleConfig);
+                }
+                
                 currentLayer.setStyle(newStyle);
                 
                 // Store original style for resetting
@@ -826,12 +930,12 @@ function resetStyle() {
     // Remove stored style
     delete layerStyles[layerId];
     
+    // Reset the actual layer to original styles
+    resetLayerToOriginal(layerId);
+    
     // Get geometry type and create default style from current layer
     const geometryType = getLayerGeometryType(layerId);
     const defaultStyle = createDefaultStyleFromLayer(layerId, geometryType);
-    
-    // Apply default style
-    applyStyleToLayer(defaultStyle);
     
     // Remove any legend summary
     const summaryContainer = document.getElementById(`${layerId}-legend-summary`);
@@ -847,6 +951,65 @@ function resetStyle() {
     
     // Reload modal with default values
     loadStyleToModal(defaultStyle, geometryType);
+}
+
+// Reset layer to original styling on the map
+function resetLayerToOriginal(layerId) {
+    const camelCaseId = toCamelCase(layerId);
+    
+    // Check if layerGroups is available (from map.js)
+    if (typeof layerGroups === 'undefined') {
+        console.log('layerGroups not available yet');
+        return;
+    }
+    
+    const layerGroup = layerGroups[camelCaseId];
+    
+    if (!layerGroup) {
+        console.log('Layer group not found for:', layerId);
+        return;
+    }
+    
+    layerGroup.eachLayer(layer => {
+        function resetFeature(currentLayer) {
+            if (currentLayer.getLayers) {
+                currentLayer.getLayers().forEach(subLayer => resetFeature(subLayer));
+            } else if (currentLayer.feature && currentLayer.setStyle && currentLayer.options.originalStyle) {
+                // Reset to original style if available
+                currentLayer.setStyle(currentLayer.options.originalStyle);
+            } else if (currentLayer.feature && currentLayer.setStyle) {
+                // Reset to default style based on geometry type
+                const geometryType = getLayerGeometryType(layerId);
+                let defaultStyle = {};
+                
+                if (geometryType === 'polygon') {
+                    defaultStyle = {
+                        fillColor: '#3388ff',
+                        fillOpacity: 0.7,
+                        color: '#000000',
+                        opacity: 1.0,
+                        weight: 2
+                    };
+                } else if (geometryType === 'point') {
+                    defaultStyle = {
+                        color: '#3388ff',
+                        opacity: 1.0,
+                        radius: 8,
+                        fillOpacity: 0.7
+                    };
+                } else if (geometryType === 'line') {
+                    defaultStyle = {
+                        color: '#3388ff',
+                        opacity: 1.0,
+                        weight: 3
+                    };
+                }
+                
+                currentLayer.setStyle(defaultStyle);
+            }
+        }
+        resetFeature(layer);
+    });
 }
 
 // Reset legend color indicator to default styling
@@ -912,21 +1075,31 @@ window.addEventListener('load', function() {
 });
 
 // Add category to categorized styling
-function addCategory(controlId) {
+function addCategory(controlId, value = '', style = '') {
     const categoriesDiv = document.getElementById(`${controlId}-categories`);
     if (!categoriesDiv) return;
     
     const categoryItem = document.createElement('div');
     categoryItem.className = 'category-item';
+    categoryItem.style.cssText = 'margin-bottom: 5px; padding: 5px; border: 1px solid #ddd; border-radius: 3px;';
     
     const type = controlId.split('-')[1];
     
+    let styleInput = '';
+    if (type === 'color') {
+        styleInput = `<input type="color" class="category-style" value="${style || '#3388ff'}">`;
+    } else if (type === 'opacity') {
+        styleInput = `<input type="range" class="category-style" min="0" max="1" step="0.1" value="${style || '1'}">`;
+    } else {
+        styleInput = `<input type="number" class="category-style" min="1" max="20" value="${style || '5'}">`;
+    }
+    
     categoryItem.innerHTML = `
-        <input type="text" placeholder="Category value" class="category-value">
-        ${type === 'color' ? '<input type="color" class="category-style" value="#3388ff">' :
-          type === 'opacity' ? '<input type="range" class="category-style" min="0" max="1" step="0.1" value="1">' :
-          '<input type="number" class="category-style" min="1" max="20" value="5">'}
-        <button onclick="removeCategory(this)">Remove</button>
+        <div style="display: flex; align-items: center; gap: 5px;">
+            <input type="text" placeholder="Category value" class="category-value" value="${value}" style="flex: 1;">
+            ${styleInput}
+            <button onclick="removeCategory(this)" style="padding: 2px 6px;">Remove</button>
+        </div>
     `;
     
     categoriesDiv.appendChild(categoryItem);
