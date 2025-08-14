@@ -152,8 +152,8 @@ function searchLayerGroup(layerGroup, latlng, point, groupName, foundLayers) {
                 
                 foundLayers.push({
                     layer: layer,
-                    groupName: groupName,
-                    feature: feature
+                    feature: feature,
+                    groupName: groupName
                 });
             }
         }
@@ -1718,7 +1718,8 @@ async function loadGrowthZones() {
                 fillOpacity: 0 // no fill
             },
             onEachFeature: function(feature, layer) {
-                // Popup handling is managed by the central multi-layer popup system
+                // Store the feature on the layer for popup access
+                layer.feature = feature;
             }
         }).addTo(layerGroups.growthZones);
     } catch (error) {
@@ -1742,7 +1743,8 @@ async function loadHousingData() {
                 fillOpacity: 0
             },
             onEachFeature: function(feature, layer) {
-                // Popup handling is managed by the central multi-layer popup system
+                // Store the feature on the layer for popup access
+                layer.feature = feature;
             }
         }).addTo(layerGroups.housing);
     } catch (error) {
@@ -1918,7 +1920,8 @@ async function loadRailStations() {
                 });
             },
             onEachFeature: function(feature, layer) {
-                // Popup handling is managed by the central multi-layer popup system
+                // Store the feature on the layer for popup access
+                layer.feature = feature;
             }
         });
         layerGroups.railStations.addLayer(railStationsLayer);
@@ -2185,7 +2188,8 @@ async function loadTCRSchemesData() {
                 });
             },
             onEachFeature: function(feature, layer) {
-                // Popup handling is managed by the central multi-layer popup system
+                // Store the feature on the layer for popup access
+                layer.feature = feature;
             }
         });
         layerGroups.tcrSchemes.addLayer(tcrPointsLayer);
@@ -2203,7 +2207,8 @@ async function loadTCRSchemesData() {
                 dashArray: '2, 2'
             },
             onEachFeature: function(feature, layer) {
-                // Popup handling is managed by the central multi-layer popup system
+                // Store the feature on the layer for popup access
+                layer.feature = feature;
             }
         });
         layerGroups.tcrSchemes.addLayer(tcrLinesLayer);
@@ -2222,7 +2227,8 @@ async function loadTCRSchemesData() {
                 dashArray: '2, 2'
             },
             onEachFeature: function(feature, layer) {
-                // Popup handling is managed by the central multi-layer popup system
+                // Store the feature on the layer for popup access
+                layer.feature = feature;
             }
         });
         layerGroups.tcrSchemes.addLayer(tcrPolygonsLayer);
