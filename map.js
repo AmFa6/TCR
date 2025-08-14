@@ -141,9 +141,9 @@ function searchLayerGroup(layerGroup, latlng, point, groupName, foundLayers) {
         if (layer instanceof L.LayerGroup) {
             // Recursively search nested layer groups
             searchLayerGroup(layer, latlng, point, groupName, foundLayers);
-        } else if (layer.feature || layer instanceof L.Marker || layer instanceof L.CircleMarker) {
+        } else if (layer.feature || layer instanceof L.Marker || layer instanceof L.CircleMarker || layer instanceof L.Polygon || layer instanceof L.Polyline) {
             // Check if this layer contains the click point
-            console.log(`  Checking layer type: ${layer.constructor.name}, has feature: ${!!layer.feature}`);
+            console.log(`  Checking layer type: ${layer.constructor.name}, has feature: ${!!layer.feature}, geometry: ${layer.feature?.geometry?.type || 'N/A'}`);
             if (isLayerAtPoint(layer, latlng, point)) {
                 console.log(`  ✓ Found matching layer in ${groupName}`);
                 // For layers without feature property, create a basic feature object
@@ -159,6 +159,8 @@ function searchLayerGroup(layerGroup, latlng, point, groupName, foundLayers) {
                     feature: feature,
                     groupName: groupName
                 });
+            } else {
+                console.log(`  ✗ Layer not at click point`);
             }
         } else {
             console.log(`  Skipping layer type: ${layer.constructor.name}`);
@@ -180,7 +182,10 @@ function isLayerAtPoint(layer, latlng, point) {
         
         // For polygon features
         if (layer instanceof L.Polygon) {
-            return isPointInPolygon(latlng, layer.getLatLngs());
+            console.log(`    Checking polygon at point [${latlng.lat}, ${latlng.lng}]`);
+            const result = isPointInPolygon(latlng, layer.getLatLngs());
+            console.log(`    Polygon contains point: ${result}`);
+            return result;
         }
         
         // For polyline features
@@ -236,8 +241,11 @@ function isPointInPolygon(point, polygon) {
     }
     
     if (!coords || coords.length < 3) {
+        console.warn('Polygon has insufficient coordinates:', coords);
         return false;
     }
+    
+    console.log(`      Point-in-polygon check: point=[${point.lat}, ${point.lng}], polygon has ${coords.length} coordinates`);
     
     let inside = false;
     for (let i = 0, j = coords.length - 1; i < coords.length; j = i++) {
@@ -251,6 +259,8 @@ function isPointInPolygon(point, polygon) {
             inside = !inside;
         }
     }
+    
+    console.log(`      Result: inside = ${inside}`);
     return inside;
 }
 
@@ -370,7 +380,7 @@ function showPopupAtIndex(index, latlng) {
     
     // Create and show popup
     activePopup = L.popup({
-        maxWidth: 300,
+        maxWidth: 400,
         className: 'multi-layer-popup'
     })
     .setLatLng(popupPosition)
