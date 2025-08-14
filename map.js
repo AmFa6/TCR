@@ -403,7 +403,10 @@ function passesActiveFilters(feature, groupName) {
         
         switch (filter.operator) {
             case 'equals':
-                passesFilter = propValue == filter.value1;
+                // Make comparison case-insensitive for better matching
+                const filterValue = filter.value1.toString().toLowerCase();
+                const propValueStr = propValue ? propValue.toString().toLowerCase() : '';
+                passesFilter = propValueStr === filterValue;
                 break;
             case 'contains':
                 passesFilter = propValue && propValue.toString().toLowerCase().includes(filter.value1.toLowerCase());
@@ -1762,8 +1765,11 @@ function applyLayerFilters(layerName) {
                     
                     switch (filter.operator) {
                         case 'equals':
-                            passesFilter = propValue == filter.value1;
-                            console.log('Equals comparison result:', passesFilter);
+                            // Make comparison case-insensitive for better matching
+                            const filterValue = filter.value1.toString().toLowerCase();
+                            const propValueStr = propValue ? propValue.toString().toLowerCase() : '';
+                            passesFilter = propValueStr === filterValue;
+                            console.log('Equals comparison result:', passesFilter, '(case-insensitive)');
                             break;
                         case 'contains':
                             passesFilter = propValue && propValue.toString().toLowerCase().includes(filter.value1.toLowerCase());
@@ -1802,13 +1808,33 @@ function applyLayerFilters(layerName) {
             // Show or hide the feature based on filter results
             if (showFeature) {
                 visibleFeatures++;
-                if (!map.hasLayer(currentLayer)) {
-                    layerGroup.addLayer(currentLayer);
+                // Make sure the layer is visible
+                if (currentLayer.setOpacity) {
+                    currentLayer.setOpacity(1);
+                }
+                if (currentLayer.setStyle) {
+                    const originalStyle = currentLayer.options.originalStyle || currentLayer.options;
+                    currentLayer.setStyle(originalStyle);
                 }
             } else {
                 hiddenFeatures++;
-                if (map.hasLayer(currentLayer)) {
-                    layerGroup.removeLayer(currentLayer);
+                // Hide the layer by setting opacity to 0 or removing it
+                console.log('Hiding feature layer');
+                if (currentLayer.setOpacity) {
+                    currentLayer.setOpacity(0);
+                } else if (currentLayer.setStyle) {
+                    // For polygon/line layers, make them invisible
+                    currentLayer.setStyle({
+                        opacity: 0,
+                        fillOpacity: 0,
+                        weight: 0
+                    });
+                } else {
+                    // Try to remove from parent layer
+                    const parentLayer = currentLayer._parentLayer || layerGroup;
+                    if (parentLayer && parentLayer.removeLayer) {
+                        parentLayer.removeLayer(currentLayer);
+                    }
                 }
             }
         }
@@ -1829,8 +1855,20 @@ function clearAllFilters() {
         function resetLayerVisibility(currentLayer) {
             if (currentLayer.getLayers) {
                 currentLayer.getLayers().forEach(subLayer => resetLayerVisibility(subLayer));
-            } else if (currentLayer.setStyle) {
-                currentLayer.setStyle({ opacity: currentLayer.options.opacity || 1, fillOpacity: currentLayer.options.fillOpacity || 0.7 });
+            } else if (currentLayer.feature && currentLayer.feature.properties) {
+                // Reset layer visibility
+                if (currentLayer.setOpacity) {
+                    currentLayer.setOpacity(1);
+                }
+                if (currentLayer.setStyle) {
+                    // Reset to original style
+                    const originalStyle = currentLayer.options.originalStyle || {
+                        opacity: 1,
+                        fillOpacity: 0.7,
+                        weight: 2
+                    };
+                    currentLayer.setStyle(originalStyle);
+                }
             }
         }
         layerGroup.eachLayer(resetLayerVisibility);
