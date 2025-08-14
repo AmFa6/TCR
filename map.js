@@ -100,6 +100,14 @@ function setupMultiLayerPopups() {
     map.on('click', function(e) {
         handleMapClick(e);
     });
+    
+    // Clean up highlights when popup is closed
+    map.on('popupclose', function(e) {
+        removeHighlight();
+        currentPopupLayers = [];
+        currentPopupIndex = 0;
+        activePopup = null;
+    });
 }
 
 function handleMapClick(e) {
@@ -382,8 +390,11 @@ function showPopupAtIndex(index, latlng) {
     const groupName = layerInfo.groupName;
     const layer = layerInfo.layer;
     
-    // Highlight the feature
-    highlightFeature(layer);
+    // Always remove previous highlight first
+    removeHighlight();
+    
+    // Highlight the current feature
+    highlightCurrentFeature(layer, index);
     
     // Use the standardized popup content creation function
     let popupContent = createFullPopupContent(feature, groupName);
@@ -476,15 +487,20 @@ window.nextPopup = function() {
     }
 };
 
-// Function to highlight a feature
-function highlightFeature(layer) {
-    // Remove previous highlight
+// Enhanced function to highlight current feature during navigation
+function highlightCurrentFeature(layer, index) {
+    // Always remove any existing highlight first
     removeHighlight();
+    
+    if (!layer) {
+        console.warn('No layer provided for highlighting');
+        return;
+    }
     
     // Store reference to highlighted layer
     highlightedLayer = layer;
     
-    // Store original style more comprehensively
+    // Store original style comprehensively based on layer type
     if (layer instanceof L.CircleMarker || layer instanceof L.Marker) {
         originalStyle = {
             color: layer.options.color || '#3388ff',
@@ -494,6 +510,17 @@ function highlightFeature(layer) {
             fillOpacity: layer.options.fillOpacity || 0.2,
             radius: layer.options.radius || 5
         };
+        
+        // Apply bright highlight style for points
+        layer.setStyle({
+            color: '#ff0000',
+            fillColor: '#ff0000',
+            weight: 4,
+            opacity: 1,
+            fillOpacity: 0.9,
+            radius: Math.max((originalStyle.radius || 5) + 3, 8)
+        });
+        
     } else if (layer instanceof L.Polygon) {
         originalStyle = {
             color: layer.options.color || '#3388ff',
@@ -502,12 +529,32 @@ function highlightFeature(layer) {
             opacity: layer.options.opacity || 1,
             fillOpacity: layer.options.fillOpacity || 0.2
         };
+        
+        // Apply bright highlight style for polygons
+        layer.setStyle({
+            color: '#ff0000',
+            fillColor: '#ff0000',
+            weight: 4,
+            opacity: 1,
+            fillOpacity: 0.4
+        });
+        
     } else if (layer instanceof L.Polyline) {
         originalStyle = {
             color: layer.options.color || '#3388ff',
             weight: layer.options.weight || 3,
-            opacity: layer.options.opacity || 1
+            opacity: layer.options.opacity || 1,
+            dashArray: layer.options.dashArray || null
         };
+        
+        // Apply bright highlight style for lines
+        layer.setStyle({
+            color: '#ff0000',
+            weight: Math.max(5, (originalStyle.weight || 3) + 2),
+            opacity: 1,
+            dashArray: null // Remove any dash pattern during highlight
+        });
+        
     } else {
         // Fallback for other layer types
         originalStyle = {
@@ -518,41 +565,50 @@ function highlightFeature(layer) {
             fillOpacity: layer.options.fillOpacity,
             radius: layer.options.radius
         };
-    }
-    
-    // Apply highlight style based on layer type
-    if (layer instanceof L.CircleMarker || layer instanceof L.Marker) {
-        // For point features
-        layer.setStyle({
-            color: '#ff0000', // bright red for better visibility
-            fillColor: '#ff0000',
+        
+        // Apply generic highlight
+        const highlightStyle = {
+            color: '#ff0000',
             weight: 4,
-            opacity: 1,
-            fillOpacity: 0.9,
-            radius: (originalStyle.radius || 5) + 3
-        });
-    } else if (layer instanceof L.Polygon) {
-        // For polygon features
-        layer.setStyle({
-            color: '#ff0000', // bright red
-            fillColor: '#ff0000',
-            weight: 4,
-            opacity: 1,
-            fillOpacity: 0.4
-        });
-    } else if (layer instanceof L.Polyline) {
-        // For line features
-        layer.setStyle({
-            color: '#ff0000', // bright red
-            weight: 5,
             opacity: 1
-        });
+        };
+        
+        if (originalStyle.fillColor !== undefined) {
+            highlightStyle.fillColor = '#ff0000';
+            highlightStyle.fillOpacity = 0.4;
+        }
+        if (originalStyle.radius !== undefined) {
+            highlightStyle.radius = Math.max((originalStyle.radius || 5) + 3, 8);
+            highlightStyle.fillOpacity = 0.9;
+        }
+        
+        layer.setStyle(highlightStyle);
     }
     
-    // Bring to front
-    if (layer.bringToFront) {
+    // Bring the highlighted layer to front
+    if (layer.bringToFront && typeof layer.bringToFront === 'function') {
         layer.bringToFront();
     }
+    
+    // Add a subtle pulse effect by adjusting the map view slightly if needed
+    if (layer.getBounds && typeof layer.getBounds === 'function') {
+        const bounds = layer.getBounds();
+        if (bounds.isValid() && !map.getBounds().contains(bounds)) {
+            map.panTo(bounds.getCenter());
+        }
+    } else if (layer.getLatLng && typeof layer.getLatLng === 'function') {
+        const latLng = layer.getLatLng();
+        if (!map.getBounds().contains(latLng)) {
+            map.panTo(latLng);
+        }
+    }
+    
+    console.log(`Highlighted feature ${index + 1} of type ${layer.constructor.name}`);
+}
+
+// Function to highlight a feature (legacy support)
+function highlightFeature(layer) {
+    highlightCurrentFeature(layer, 0);
 }
 
 // Function to remove highlight
