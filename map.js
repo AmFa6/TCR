@@ -360,17 +360,23 @@ function calculatePopupPosition(layer, clickedLatLng) {
 }
 
 function showPopupAtIndex(index, latlng) {
+    console.log('showPopupAtIndex called with index:', index, 'total layers:', currentPopupLayers.length);
+    
     if (index < 0 || index >= currentPopupLayers.length) {
+        console.log('Invalid index, returning');
         return;
     }
     
     // Update the current popup index to stay in sync
     currentPopupIndex = index;
+    console.log('Updated currentPopupIndex to:', currentPopupIndex);
     
     const layerInfo = currentPopupLayers[index];
     const feature = layerInfo.feature;
     const groupName = layerInfo.groupName;
     const layer = layerInfo.layer;
+    
+    console.log('Selected layer info:', {groupName, hasFeature: !!feature, hasLayer: !!layer});
     
     // Always remove previous highlight first
     removeHighlight();
@@ -456,30 +462,68 @@ function formatPropertyValue(value) {
 
 // Global functions for popup navigation (called from popup buttons)
 window.previousPopup = function() {
+    console.log('previousPopup called, currentPopupIndex:', currentPopupIndex, 'total layers:', currentPopupLayers.length);
     if (currentPopupIndex > 0) {
         currentPopupIndex--;
-        showPopupAtIndex(currentPopupIndex, activePopup.getLatLng());
+        console.log('Moving to previous, new index:', currentPopupIndex);
+        
+        // Get the latlng from the target layer instead of relying on activePopup
+        const targetLayer = currentPopupLayers[currentPopupIndex].layer;
+        let latlng;
+        if (targetLayer.getLatLng) {
+            latlng = targetLayer.getLatLng();
+        } else if (targetLayer.getBounds) {
+            latlng = targetLayer.getBounds().getCenter();
+        } else if (activePopup) {
+            latlng = activePopup.getLatLng();
+        } else {
+            console.error('Cannot determine latlng for navigation');
+            return;
+        }
+        
+        showPopupAtIndex(currentPopupIndex, latlng);
     }
 };
 
 window.nextPopup = function() {
+    console.log('nextPopup called, currentPopupIndex:', currentPopupIndex, 'total layers:', currentPopupLayers.length);
     if (currentPopupIndex < currentPopupLayers.length - 1) {
         currentPopupIndex++;
-        showPopupAtIndex(currentPopupIndex, activePopup.getLatLng());
+        console.log('Moving to next, new index:', currentPopupIndex);
+        
+        // Get the latlng from the target layer instead of relying on activePopup
+        const targetLayer = currentPopupLayers[currentPopupIndex].layer;
+        let latlng;
+        if (targetLayer.getLatLng) {
+            latlng = targetLayer.getLatLng();
+        } else if (targetLayer.getBounds) {
+            latlng = targetLayer.getBounds().getCenter();
+        } else if (activePopup) {
+            latlng = activePopup.getLatLng();
+        } else {
+            console.error('Cannot determine latlng for navigation');
+            return;
+        }
+        
+        showPopupAtIndex(currentPopupIndex, latlng);
     }
 };
 
 // Enhanced function to highlight current feature during navigation
 function highlightCurrentFeature(layer, index) {
+    console.log('highlightCurrentFeature called for index:', index, 'layer type:', layer?.constructor?.name);
+    
     // Always remove any existing highlight first
     removeHighlight();
     
     if (!layer) {
+        console.log('No layer provided, skipping highlight');
         return;
     }
     
     // Store reference to highlighted layer
     highlightedLayer = layer;
+    console.log('Set highlightedLayer to:', layer?.constructor?.name);
     
     // Store original style comprehensively based on layer type
     if (layer instanceof L.CircleMarker || layer instanceof L.Marker) {
