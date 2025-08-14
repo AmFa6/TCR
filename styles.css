@@ -63,14 +63,14 @@ html, body {
 }
 
 .popup-table th {
-    width: 50px;
+    width: 100px;
     padding: 4px;
     border-bottom: 2px solid #333;
     text-align: left;
 }
 
 .popup-table th:last-child {
-    width: 100px;
+    width: 200px;
 }
 
 .taf-popup {
