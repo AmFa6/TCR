@@ -418,18 +418,25 @@ function updateStyleControls(controlId, styleConfig) {
     const controlsDiv = document.getElementById(`${controlId}-controls`);
     const method = styleConfig.method;
     
+    console.log('updateStyleControls called with:', controlId, method, styleConfig);
+    
     controlsDiv.innerHTML = '';
     
     switch (method) {
         case 'simple':
+            console.log('Creating simple controls for:', controlId);
             createSimpleControls(controlsDiv, controlId, styleConfig);
             break;
         case 'categorized':
+            console.log('Creating categorized controls for:', controlId);
             createCategorizedControls(controlsDiv, controlId, styleConfig);
             break;
         case 'graduated':
+            console.log('Creating graduated controls for:', controlId);
             createGraduatedControls(controlsDiv, controlId, styleConfig);
             break;
+        default:
+            console.log('Unknown method:', method);
     }
 }
 
@@ -610,6 +617,8 @@ function updateColorsFromScheme(controlId, scheme) {
 
 // Enhanced categorized controls with random color generation
 function createCategorizedControls(container, controlId, styleConfig) {
+    console.log('Creating categorized controls for:', controlId, styleConfig);
+    
     container.innerHTML = `
         <div style="margin-bottom: 10px;">
             <label>Attribute:</label>
@@ -625,8 +634,11 @@ function createCategorizedControls(container, controlId, styleConfig) {
         <button type="button" onclick="addCategory('${controlId}')">Add Category</button>
     `;
     
+    console.log('Categorized controls HTML created, setting up dropdown population');
+    
     // Populate attributes after the container is updated
     setTimeout(() => {
+        console.log('Populating attribute dropdown for categorized controls');
         populateAttributeDropdown(`${controlId}-attribute`);
         
         // Set the attribute if it exists in styleConfig
@@ -731,6 +743,8 @@ function populateAttributeDropdown(selectId) {
     const layerId = modal.getAttribute('data-current-layer');
     const select = document.getElementById(selectId);
     
+    console.log('Populating attribute dropdown for:', selectId, 'layerId:', layerId);
+    
     // Clear existing options except the first one
     select.innerHTML = '<option value="">Select attribute...</option>';
     
@@ -744,6 +758,7 @@ function populateAttributeDropdown(selectId) {
     }
     
     const layerGroup = layerGroups[camelCaseId];
+    console.log('Found layer group:', camelCaseId, layerGroup);
     
     if (layerGroup) {
         const attributes = new Set();
@@ -765,6 +780,8 @@ function populateAttributeDropdown(selectId) {
             getAllFeatures(layer);
         });
         
+        console.log('Found attributes:', Array.from(attributes));
+        
         // Add attributes to dropdown
         Array.from(attributes).sort().forEach(attr => {
             const option = document.createElement('option');
@@ -772,6 +789,10 @@ function populateAttributeDropdown(selectId) {
             option.textContent = attr;
             select.appendChild(option);
         });
+        
+        console.log('Populated dropdown with', attributes.size, 'attributes');
+    } else {
+        console.log('No layer group found for:', camelCaseId);
     }
 }
 
@@ -1255,11 +1276,15 @@ function setupStyleEventListeners() {
     methodSelects.forEach(selectId => {
         const select = document.getElementById(selectId);
         if (select) {
+            console.log('Setting up event listener for:', selectId);
             select.addEventListener('change', function() {
                 const controlId = selectId.replace('-method', '');
                 const styleConfig = { method: this.value };
+                console.log('Method changed:', selectId, 'to', this.value, 'controlId:', controlId);
                 updateStyleControls(controlId, styleConfig);
             });
+        } else {
+            console.log('No select element found for:', selectId);
         }
     });
 }

@@ -2718,9 +2718,9 @@ async function loadTCRSchemesData() {
         const tcrLinesLayer = L.geoJSON(transformedTCRLines, {
             style: {
                 color: '#ff00ff', // magenta
-                weight: 0.5,
+                weight: 3,
                 opacity: 1,
-                dashArray: '2, 2'
+                dashArray: '5, 5'
             },
             onEachFeature: function(feature, layer) {
                 // Store the feature on the layer for popup access
@@ -2738,10 +2738,10 @@ async function loadTCRSchemesData() {
         const tcrPolygonsLayer = L.geoJSON(convertedTCRPolygons, {
             style: {
                 color: '#ff00ff', // magenta
-                fillColor: 'transparent',
-                fillOpacity: 0,
-                weight: 0.5,
-                dashArray: '2, 2'
+                fillColor: '#ff00ff',
+                fillOpacity: 0.3,
+                weight: 2,
+                dashArray: '5, 5'
             },
             onEachFeature: function(feature, layer) {
                 // Store the feature on the layer for popup access
