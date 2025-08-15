@@ -203,9 +203,8 @@ function searchLayerGroup(layerGroup, latlng, point, groupName, foundLayers) {
             
             // Skip layers that are hidden by filters (opacity 0 or invisible style)
             const isLayerVisible = !layer.options || 
-                                 (layer.options.opacity !== 0 && 
-                                  layer.options.fillOpacity !== 0 && 
-                                  layer.options.weight !== 0);
+                                 !(layer.options.opacity === 0 || 
+                                   (layer.options.fillOpacity === 0 && layer.options.weight === 0));
             
             // Check if this layer contains the click point AND is currently visible
             if (isLayerVisible && isLayerAtPoint(layer, latlng, point)) {
@@ -2688,10 +2687,13 @@ async function loadTransportInfrastructure() {
 
 async function loadTCRSchemesData() {
     try {
+        console.log('Loading TCR schemes data...');
+        
         // Load TCR Points
         const tcrPointsResponse = await fetch('data/schemes_pt.geojson');
         const tcrPointsData = await tcrPointsResponse.json();
         const transformedTCRPoints = transformGeoJSON(tcrPointsData);
+        console.log('TCR Points loaded:', transformedTCRPoints.features.length, 'features');
         
         const tcrPointsLayer = L.geoJSON(transformedTCRPoints, {
             pointToLayer: function(feature, latlng) {
@@ -2709,11 +2711,13 @@ async function loadTCRSchemesData() {
             }
         });
         layerGroups.tcrSchemes.addLayer(tcrPointsLayer);
+        console.log('TCR Points layer added to map');
 
         // Load TCR Lines
         const tcrLinesResponse = await fetch('data/schemes_ln.geojson');
         const tcrLinesData = await tcrLinesResponse.json();
         const transformedTCRLines = transformGeoJSON(tcrLinesData);
+        console.log('TCR Lines loaded:', transformedTCRLines.features.length, 'features');
         
         const tcrLinesLayer = L.geoJSON(transformedTCRLines, {
             style: {
@@ -2728,12 +2732,14 @@ async function loadTCRSchemesData() {
             }
         });
         layerGroups.tcrSchemes.addLayer(tcrLinesLayer);
+        console.log('TCR Lines layer added to map');
 
         // Load TCR Polygons
         const tcrPolygonsResponse = await fetch('data/schemes_pg.geojson');
         const tcrPolygonsData = await tcrPolygonsResponse.json();
         const transformedTCRPolygons = transformGeoJSON(tcrPolygonsData);
         const convertedTCRPolygons = convertMultiPolygonToPolygons(transformedTCRPolygons);
+        console.log('TCR Polygons loaded:', convertedTCRPolygons.features.length, 'features');
         
         const tcrPolygonsLayer = L.geoJSON(convertedTCRPolygons, {
             style: {
@@ -2749,8 +2755,12 @@ async function loadTCRSchemesData() {
             }
         });
         layerGroups.tcrSchemes.addLayer(tcrPolygonsLayer);
+        console.log('TCR Polygons layer added to map');
+        
+        console.log('All TCR schemes layers loaded successfully');
 
     } catch (error) {
+        console.error('Error loading TCR schemes:', error);
     }
 }
 

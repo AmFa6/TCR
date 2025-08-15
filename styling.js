@@ -419,6 +419,12 @@ function updateStyleControls(controlId, styleConfig) {
     const method = styleConfig.method;
     
     console.log('updateStyleControls called with:', controlId, method, styleConfig);
+    console.log('Controls div found:', controlsDiv);
+    
+    if (!controlsDiv) {
+        console.error('Controls div not found for:', controlId);
+        return;
+    }
     
     controlsDiv.innerHTML = '';
     
@@ -638,8 +644,16 @@ function createCategorizedControls(container, controlId, styleConfig) {
     
     // Populate attributes after the container is updated
     setTimeout(() => {
-        console.log('Populating attribute dropdown for categorized controls');
-        populateAttributeDropdown(`${controlId}-attribute`);
+        console.log('Timeout triggered, checking for attribute dropdown element');
+        const attributeDropdown = document.getElementById(`${controlId}-attribute`);
+        console.log('Attribute dropdown element:', attributeDropdown);
+        
+        if (attributeDropdown) {
+            console.log('Populating attribute dropdown for categorized controls');
+            populateAttributeDropdown(`${controlId}-attribute`);
+        } else {
+            console.error('Attribute dropdown not found after timeout for:', controlId);
+        }
         
         // Set the attribute if it exists in styleConfig
         if (styleConfig.attribute) {
@@ -655,7 +669,7 @@ function createCategorizedControls(container, controlId, styleConfig) {
                 addCategory(controlId, category.value, category.style);
             });
         }
-    }, 100);
+    }, 500); // Increased timeout to 500ms
 }
 
 // Generate random colors for existing categories
@@ -905,7 +919,13 @@ function collectMethodConfig(controlId) {
             break;
             
         case 'categorized':
-            config.attribute = document.getElementById(`${controlId}-attribute`).value;
+            const attributeSelect = document.getElementById(`${controlId}-attribute`);
+            if (!attributeSelect) {
+                console.error('Attribute select not found for:', controlId);
+                config.attribute = '';
+            } else {
+                config.attribute = attributeSelect.value;
+            }
             config.categories = [];
             
             // Collect categories from the UI
