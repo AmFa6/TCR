@@ -2698,11 +2698,11 @@ async function loadTCRSchemesData() {
         const tcrPointsLayer = L.geoJSON(transformedTCRPoints, {
             pointToLayer: function(feature, latlng) {
                 return L.circleMarker(latlng, {
-                    color: '#ff00ff', // magenta
-                    fillColor: '#ff00ff',
+                    color: '#ff69b4', // pink to match polygon outline
+                    fillColor: '#ff69b4',
                     fillOpacity: 1,
-                    radius: 3,
-                    weight: 0.5
+                    radius: 4,
+                    weight: 2
                 });
             },
             onEachFeature: function(feature, layer) {
@@ -2721,10 +2721,9 @@ async function loadTCRSchemesData() {
         
         const tcrLinesLayer = L.geoJSON(transformedTCRLines, {
             style: {
-                color: '#ff00ff', // magenta
-                weight: 3,
-                opacity: 1,
-                dashArray: '5, 5'
+                color: '#ff69b4', // pink
+                weight: 4,
+                opacity: 1
             },
             onEachFeature: function(feature, layer) {
                 // Store the feature on the layer for popup access
@@ -2743,11 +2742,10 @@ async function loadTCRSchemesData() {
         
         const tcrPolygonsLayer = L.geoJSON(convertedTCRPolygons, {
             style: {
-                color: '#ff00ff', // magenta
-                fillColor: '#ff00ff',
-                fillOpacity: 0.3,
-                weight: 2,
-                dashArray: '5, 5'
+                color: '#ff69b4', // pink thick outline
+                fillColor: '#ff69b4', // same color fill
+                fillOpacity: 0.2, // 20% opacity
+                weight: 4
             },
             onEachFeature: function(feature, layer) {
                 // Store the feature on the layer for popup access

@@ -63,6 +63,126 @@ function createStyleModal() {
     const modal = document.createElement('div');
     modal.id = 'style-modal';
     modal.className = 'modal';
+    
+    // Check if this is for TCR schemes
+    const modalElement = document.getElementById('style-modal');
+    const layerId = modalElement?.getAttribute('data-current-layer') || '';
+    const isTcrSchemes = layerId === 'tcr-schemes';
+    
+    if (isTcrSchemes) {
+        // Three-tab interface for TCR schemes
+        modal.innerHTML = `
+            <div class="modal-content style-modal-content">
+                <div class="modal-header">
+                    <h3 id="style-layer-title">Style TCR Schemes</h3>
+                    <span class="close" onclick="closeStyleModal()">&times;</span>
+                </div>
+                
+                <div class="style-tabs">
+                    <button class="tab-btn active" onclick="switchStyleTab('polygons')">Polygons</button>
+                    <button class="tab-btn" onclick="switchStyleTab('lines')">Lines</button>
+                    <button class="tab-btn" onclick="switchStyleTab('points')">Points</button>
+                </div>
+                
+                <!-- Polygons Tab -->
+                <div id="polygons-tab" class="style-tab active">
+                    <div class="style-section">
+                        <h4>Polygon Style</h4>
+                        <div class="style-group">
+                            <label>Fill Color:</label>
+                            <input type="color" id="polygon-fill-color" value="#ff69b4">
+                        </div>
+                        <div class="style-group">
+                            <label>Fill Opacity:</label>
+                            <input type="range" id="polygon-fill-opacity" min="0" max="1" step="0.1" value="0.2">
+                            <span id="polygon-fill-opacity-display">20%</span>
+                        </div>
+                        <div class="style-group">
+                            <label>Outline Color:</label>
+                            <input type="color" id="polygon-outline-color" value="#ff69b4">
+                        </div>
+                        <div class="style-group">
+                            <label>Outline Width:</label>
+                            <input type="number" id="polygon-outline-width" min="1" max="10" value="4">
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Lines Tab -->
+                <div id="lines-tab" class="style-tab">
+                    <div class="style-section">
+                        <h4>Line Style</h4>
+                        <div class="style-group">
+                            <label>Color:</label>
+                            <input type="color" id="line-color" value="#ff69b4">
+                        </div>
+                        <div class="style-group">
+                            <label>Width:</label>
+                            <input type="number" id="line-width" min="1" max="10" value="4">
+                        </div>
+                        <div class="style-group">
+                            <label>Opacity:</label>
+                            <input type="range" id="line-opacity" min="0" max="1" step="0.1" value="1">
+                            <span id="line-opacity-display">100%</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Points Tab -->
+                <div id="points-tab" class="style-tab">
+                    <div class="style-section">
+                        <h4>Point Style</h4>
+                        <div class="style-group">
+                            <label>Color:</label>
+                            <input type="color" id="point-color" value="#ff69b4">
+                        </div>
+                        <div class="style-group">
+                            <label>Size:</label>
+                            <input type="number" id="point-size" min="1" max="20" value="4">
+                        </div>
+                        <div class="style-group">
+                            <label>Outline Width:</label>
+                            <input type="number" id="point-outline-width" min="1" max="5" value="2">
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="modal-actions">
+                    <button onclick="applyTcrStyle()">Apply Style</button>
+                    <button onclick="resetTcrStyle()">Reset to Default</button>
+                    <button onclick="closeStyleModal()">Cancel</button>
+                </div>
+            </div>
+        `;
+        
+        // Add tab click handlers for TCR modal
+        setTimeout(() => {
+            const tabs = modal.querySelectorAll('.tab');
+            const contents = modal.querySelectorAll('.tab-content');
+            
+            tabs.forEach(tab => {
+                tab.addEventListener('click', function() {
+                    const targetTab = this.dataset.tab;
+                    
+                    // Remove active class from all tabs and contents
+                    tabs.forEach(t => t.classList.remove('active'));
+                    contents.forEach(c => c.classList.remove('active'));
+                    
+                    // Add active class to clicked tab and corresponding content
+                    this.classList.add('active');
+                    const targetContent = modal.querySelector(`.tab-content[data-tab="${targetTab}"]`);
+                    if (targetContent) {
+                        targetContent.classList.add('active');
+                    }
+                });
+            });
+            
+            // Setup opacity display updates
+            setupTcrOpacityDisplays();
+        }, 0);
+        
+    } else {
+        // Regular single-tab interface for other layers
     modal.innerHTML = `
         <div class="modal-content style-modal-content">
             <div class="modal-header">
@@ -182,6 +302,7 @@ function createStyleModal() {
             </div>
         </div>
     `;
+    }
     
     return modal;
 }
@@ -1618,4 +1739,123 @@ function findLayerControlElement(layerId) {
     }
     
     return null;
+}
+
+// Apply style specifically for TCR schemes
+function applyTcrStyle() {
+    const polygonFillColor = document.getElementById('polygon-fill-color').value;
+    const polygonFillOpacity = parseFloat(document.getElementById('polygon-fill-opacity').value);
+    const polygonOutlineColor = document.getElementById('polygon-outline-color').value;
+    const polygonOutlineWidth = parseInt(document.getElementById('polygon-outline-width').value);
+    
+    const lineColor = document.getElementById('line-color').value;
+    const lineWidth = parseInt(document.getElementById('line-width').value);
+    const lineOpacity = parseFloat(document.getElementById('line-opacity').value);
+    
+    const pointColor = document.getElementById('point-color').value;
+    const pointSize = parseInt(document.getElementById('point-size').value);
+    const pointOutlineWidth = parseInt(document.getElementById('point-outline-width').value);
+    
+    // Apply styles to TCR schemes layers
+    const tcrGroup = layerGroups.tcrSchemes;
+    if (tcrGroup) {
+        tcrGroup.eachLayer(subLayer => {
+            if (subLayer.getLayers) {
+                // This is a sub-group, iterate through its layers
+                subLayer.eachLayer(layer => {
+                    applyTcrLayerStyle(layer, polygonFillColor, polygonFillOpacity, polygonOutlineColor, 
+                                     polygonOutlineWidth, lineColor, lineWidth, lineOpacity, 
+                                     pointColor, pointSize, pointOutlineWidth);
+                });
+            } else {
+                // This is a direct layer
+                applyTcrLayerStyle(subLayer, polygonFillColor, polygonFillOpacity, polygonOutlineColor, 
+                                 polygonOutlineWidth, lineColor, lineWidth, lineOpacity, 
+                                 pointColor, pointSize, pointOutlineWidth);
+            }
+        });
+    }
+    
+    closeStyleModal();
+}
+
+// Apply style to individual TCR layer based on geometry type
+function applyTcrLayerStyle(layer, polygonFillColor, polygonFillOpacity, polygonOutlineColor, 
+                           polygonOutlineWidth, lineColor, lineWidth, lineOpacity, 
+                           pointColor, pointSize, pointOutlineWidth) {
+    
+    if (layer.feature && layer.feature.geometry) {
+        const geomType = layer.feature.geometry.type;
+        
+        if (geomType === 'Polygon' || geomType === 'MultiPolygon') {
+            // Apply polygon style
+            layer.setStyle({
+                fillColor: polygonFillColor,
+                fillOpacity: polygonFillOpacity,
+                color: polygonOutlineColor,
+                weight: polygonOutlineWidth,
+                opacity: 1
+            });
+        } else if (geomType === 'LineString' || geomType === 'MultiLineString') {
+            // Apply line style
+            layer.setStyle({
+                color: lineColor,
+                weight: lineWidth,
+                opacity: lineOpacity
+            });
+        } else if (geomType === 'Point' || geomType === 'MultiPoint') {
+            // Apply point style
+            layer.setStyle({
+                color: pointColor,
+                fillColor: pointColor,
+                fillOpacity: 1,
+                radius: pointSize,
+                weight: pointOutlineWidth
+            });
+        }
+    }
+}
+
+// Reset TCR schemes to default styling
+function resetTcrStyle() {
+    document.getElementById('polygon-fill-color').value = '#ff69b4';
+    document.getElementById('polygon-fill-opacity').value = '0.2';
+    document.getElementById('polygon-outline-color').value = '#ff69b4';
+    document.getElementById('polygon-outline-width').value = '4';
+    
+    document.getElementById('line-color').value = '#ff69b4';
+    document.getElementById('line-width').value = '4';
+    document.getElementById('line-opacity').value = '1';
+    
+    document.getElementById('point-color').value = '#ff69b4';
+    document.getElementById('point-size').value = '4';
+    document.getElementById('point-outline-width').value = '2';
+    
+    // Update opacity displays
+    document.getElementById('polygon-fill-opacity-display').textContent = '20%';
+    document.getElementById('line-opacity-display').textContent = '100%';
+    
+    // Apply the default styling
+    applyTcrStyle();
+}
+
+// Setup opacity display updates for TCR styling
+function setupTcrOpacityDisplays() {
+    const polygonOpacitySlider = document.getElementById('polygon-fill-opacity');
+    const polygonOpacityDisplay = document.getElementById('polygon-fill-opacity-display');
+    
+    const lineOpacitySlider = document.getElementById('line-opacity');
+    const lineOpacityDisplay = document.getElementById('line-opacity-display');
+    
+    if (polygonOpacitySlider && polygonOpacityDisplay) {
+        polygonOpacitySlider.addEventListener('input', function() {
+            polygonOpacityDisplay.textContent = Math.round(this.value * 100) + '%';
+        });
+    }
+    
+    if (lineOpacitySlider && lineOpacityDisplay) {
+        lineOpacitySlider.addEventListener('input', function() {
+            lineOpacityDisplay.textContent = Math.round(this.value * 100) + '%';
+        });
+    }
 }
